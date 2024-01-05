@@ -3,4 +3,6 @@ project(project C)
 
 set(CMAKE_C_STANDARD 17)
 
-add_executable(project main.c)
+set(CMAKE_C_FLAGS "-Wall -Werror -g")
+
+add_executable(vuln vuln.c)
