@@ -9,9 +9,9 @@
 
 #define MAX_PROGRAM_LEN 0x1000
 
-typedef enum Opcode : uint8_t { COUNT_OPCODES } Opcode;
+typedef enum Opcode : uint8_t { ADD = 1, SHIFT = 2, MOV = 3, COUNT_OPCODES } Opcode;
 
-typedef enum Register : uint8_t { COUNT_REGISTERS } Register;
+typedef enum Register : uint8_t { A = 0, B = 1, C = 2, D = 3, E = 4, F = 5, COUNT_REGISTERS } Register;
 
 typedef struct Instruction {
     Opcode opcode;
@@ -19,7 +19,6 @@ typedef struct Instruction {
 } Instruction;
 
 typedef int (*exec_func_t)();
-
 
 static __attribute__((unused)) bool premium_activated = false;
 
@@ -91,9 +90,26 @@ void exec_code(uint8_t *code) {
     _exit(res);
 }
 
-void gen_code(uint8_t *code, Instruction *program) {
-    (void)code;
-    (void)program;
+void write_instr(uint8_t *code, size_t offset, const uint8_t *instr, size_t instr_len) {
+    for (size_t i = 0; i < instr_len; ++i) {
+        code[offset + i] = instr[i];
+    }
+}
+
+void gen_code(uint8_t *code, Instruction *program, size_t program_len) {
+    Register cur_reg;
+    size_t acc;
+    for (size_t pc = 0; pc < program_len; ++pc) {
+        switch (program[pc].opcode) {
+        case ADD:
+            if (program[pc].reg == cur_reg) {
+
+            }
+        default:
+            puts("Found invalid instruction!");
+            exit(EXIT_FAILURE);
+        }
+    }
 }
 
 int run_jit(Instruction *program, size_t len) {
