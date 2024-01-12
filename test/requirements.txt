@@ -1,0 +1,3 @@
+# requirements.txt
+
+pwntools>=4.11.1
