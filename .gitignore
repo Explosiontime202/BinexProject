@@ -58,3 +58,8 @@ build
 
 /.idea
 /.vscode
+
+debug_docker/**/*
+!/debug_docker/Dockerfile
+!/debug_docker/launch.sh
+
