@@ -38,6 +38,7 @@ def instr_r(opcode, reg1, reg2):
 
 
 def exec_program(program: bytes) -> int | None:
+    context.log_level = 'debug'
     with remote("localhost", 1337, fam="ipv4") as p:
         p.recvuntil(b"Password: ", timeout=1)
         p.sendline(b"1234")
