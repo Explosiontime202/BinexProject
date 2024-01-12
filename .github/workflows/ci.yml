@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: debian-bullseye
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -22,7 +22,7 @@ jobs:
           make
 
   test:
-    runs-on: debian-bullseye
+    runs-on: ubuntu-latest
 
     env:
       fnetd_password: 1234
