@@ -52,7 +52,8 @@ jobs:
           wait-on: tcp:localhost:1337
           wait-for: 1m
 
+      - name: Setup python libs
+        run: pip install -r tests/requirements.txt
+
       - name: Tests
-        run: |
-          pip install -r tests/requirements.txt
-          python -m unittest discover tests/
+        run: python -m unittest discover tests/
