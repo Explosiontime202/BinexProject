@@ -54,5 +54,5 @@ jobs:
 
       - name: Tests
         run: |
-          pip install -r test/requirements.txt
-          python -m unittest discover test/
+          pip install -r tests/requirements.txt
+          python -m unittest discover tests/
