@@ -37,19 +37,37 @@ def instr_r(opcode, reg1, reg2):
     return bytes([opcode, reg1, 0, 0, reg2, 0, 0, 0])
 
 
-def exec_program(program: bytes) -> int:
+def exec_program(program: bytes) -> int | None:
     with remote("localhost", 1337, fam="ipv4") as p:
-        p.recvuntil(b"Password: ")
+        p.recvuntil(b"Password: ", timeout=1)
         p.sendline(b"1234")
 
-        print(p.recvuntil(b"always a Surprise)").decode())
-        print(p.recvuntil(b"should it bee?").decode())
+        msg = p.recvuntil(b"always a Surprise)", timeout=1)
+        if msg == b'':
+            return None
+        print(msg.decode())
+
+        msg = p.recvuntil(b"should it bee?", timeout=1)
+        if msg == b'':
+            return None
+        print(msg.decode())
+
         len_msg = str(len(program) // INSTR_LEN).encode()
         log.info(f"Sending: {len_msg}")
         p.sendline(len_msg)
-        print(p.recvuntil(b"Now your program:").decode())
+
+        msg = p.recvuntil(b"Now your program:", timeout=1)
+        if msg == b'':
+            return None
+        print(msg.decode())
+
         log.info(f"Sending program: {list(program)}")
         p.send(program)
-        p.recvuntil(b"Your program exited with ")
-        exit_code = int(p.recvuntil(b"!", drop=True))
+
+        msg = p.recvuntil(b"Your program exited with ", timeout=1)
+        if msg == b'':
+            return None
+        print(msg.decode())
+
+        exit_code = int(p.recvuntil(b"!", drop=True, timeout=1))
         return exit_code
