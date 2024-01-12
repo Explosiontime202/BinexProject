@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Build with CMake
         run: |
@@ -21,14 +21,22 @@ jobs:
           cmake .. -G "Unix Makefiles"
           make
 
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: build
+
   test:
     runs-on: ubuntu-latest
+
+    needs: build
 
     env:
       fnetd_password: 1234
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install fnetd
         run: |
