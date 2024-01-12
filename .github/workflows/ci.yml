@@ -63,7 +63,7 @@ jobs:
         with:
           run: |-
             chmod +x build/vuln
-            fnetd/build/fnetd -p 1337 -lt 2 -lm 536870912 build/vuln &
+            fnetd/build/fnetd -p 1337 -lt 2 -lm 536870912 "strace -f build/vuln" &
 
           tail: true
           wait-on: tcp:localhost:1337
