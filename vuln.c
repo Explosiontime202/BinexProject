@@ -16,6 +16,7 @@ typedef enum Register { Adelheid = 0, Berthold = 1, Cornelia = 2, Dora = 3, Enge
 typedef struct Instruction {
     Opcode opcode;
     Register reg1;
+    uint8_t padding[2]; // unused
     union {
         Register reg2;
         uint32_t imm;
@@ -42,12 +43,12 @@ static uint8_t register_id_lookup[COUNT_REGISTERS] = {
 
 size_t get_size_t(size_t limit) {
     size_t val;
-    char buf[0x10];
+    char buf[0x10] = {0};
     char *end_ptr;
     do {
-        if (fgets(buf, sizeof(buf), stdin) == NULL) {
+        if (fgets(buf, sizeof(buf), stdin) == NULL)
             exit(EXIT_FAILURE);
-        }
+
         val = strtoull(buf, &end_ptr, 0);
 
         if (buf == end_ptr) {
@@ -55,24 +56,26 @@ size_t get_size_t(size_t limit) {
             exit(EXIT_FAILURE);
         }
 
-        if (val <= limit) {
+        if (val <= limit)
             break;
-        }
 
-        puts("Nah, that's to long. Let's try again.");
+        puts("Nah, that's too long. Let's try again.");
     } while (true);
     return val;
 }
 
 Instruction *get_program(size_t *program_len) {
-    puts("Now to your next program: How long should it bee?");
+    printf("Now to your next program: How long should it bee?");
     size_t len = get_size_t(MAX_PROGRAM_LEN);
 
     Instruction *program = malloc(len * sizeof(Instruction));
 
     if (program == NULL) {
+        puts("Cannot malloc anything!");
         exit(EXIT_FAILURE);
     }
+
+    printf("Now your program:");
 
     if (fread(program, sizeof(Instruction), len, stdin) != len) {
         puts("You did not enter as many instructions as you wanted. Learn counting, idiot!");
@@ -89,13 +92,11 @@ bool instr_use_reg2(Opcode opcode) { return opcode == ADD || opcode == SUB || op
 bool validate_program(Instruction *program, size_t len) {
     for (size_t i = 0; i < len; ++i) {
         // prevent use of wrong opcodes or registers
-        if (program[i].opcode >= COUNT_OPCODES || program[i].reg1 >= COUNT_REGISTERS) {
+        if (program[i].opcode >= COUNT_OPCODES || program[i].reg1 >= COUNT_REGISTERS)
             return false;
-        }
 
-        if (instr_use_reg2(program[i].opcode) && program[i].reg2 >= COUNT_REGISTERS) {
+        if (instr_use_reg2(program[i].opcode) && program[i].reg2 >= COUNT_REGISTERS)
             return false;
-        }
     }
     return true;
 }
@@ -106,10 +107,10 @@ void init_seccomp() {
 
 void exec_code(uint8_t *code) {
     exec_func_t exec_func = (exec_func_t)code;
-    init_seccomp();
     close(0);
     close(1);
     close(2);
+    init_seccomp();
     uint8_t res = exec_func();
     _exit(res);
 }
@@ -127,7 +128,7 @@ void gen_3B_native_instr(uint8_t opcode, uint8_t reg1_id, uint8_t reg2_id, uint8
     size_t native_instr = 0b01001000L + (EXTRACT_REX_BIT(reg2_id) << 2) + EXTRACT_REX_BIT(reg1_id);
     native_instr += opcode << 8; // opcode
     // registers: direct addressing + lower 3 bit of second reg id + lower 3 bit of first reg id
-    native_instr += (0b11000000L + (reg2_id << 3) + reg1_id) << 16;
+    native_instr += (0b11000000L + ((reg2_id & 0b111) << 3) + (reg1_id & 0b111)) << 16;
 
     write_instr(code, offset, (uint8_t *)&native_instr, 3);
     native_instr = 0;
@@ -151,7 +152,6 @@ void gen_code(uint8_t *code, Instruction *program, size_t program_len) {
     for (size_t pc = 0; pc < program_len; ++pc) {
         Instruction instr = program[pc];
         switch (instr.opcode) {
-            // TODO: encode regs
         case ADD:
             // add reg1, reg2
             gen_3B_native_instr(0x01, register_id_lookup[instr.reg1], register_id_lookup[instr.reg2], code, &offset);
@@ -165,8 +165,8 @@ void gen_code(uint8_t *code, Instruction *program, size_t program_len) {
                 reg1_id = register_id_lookup[instr.reg1];
                 native_instr = (0b01001000L + EXTRACT_REX_BIT(reg1_id)); // REW.X prefix (we use 64bit registers) + upper bit of the first register id
                 native_instr += 0x81L << 8;                              // opcode
-                native_instr += (0b11000000L + reg1_id) << 16;           // registers: direct addressing + lower 3 bit of first reg id
-                native_instr += ((size_t)program[pc].imm + acc) << 16;   // immediate
+                native_instr += (0b11000000L + (reg1_id & 0b111)) << 16;           // registers: direct addressing + lower 3 bit of first reg id
+                native_instr += ((size_t)program[pc].imm + acc) << 24;   // immediate
                 write_instr(code, &offset, (uint8_t *)&native_instr, 7);
                 native_instr = 0;
                 acc = 0;
@@ -194,8 +194,8 @@ void gen_code(uint8_t *code, Instruction *program, size_t program_len) {
             reg1_id = register_id_lookup[instr.reg1];
             native_instr = (0b01001000L + EXTRACT_REX_BIT(reg1_id)); // REW.X prefix (we use 64bit registers) + upper bit of the first register id
             native_instr += 0xc7 << 8;                               // opcode
-            native_instr += (0b11000000L + reg1_id) << 16;           // registers: direct addressing + lower 3 bit of first reg id
-            native_instr += ((size_t)program[pc].imm) << 16;   // immediate
+            native_instr += (0b11000000L + (reg1_id & 0b111)) << 16;           // registers: direct addressing + lower 3 bit of first reg id
+            native_instr += ((size_t)program[pc].imm) << 24;         // immediate
             write_instr(code, &offset, (uint8_t *)&native_instr, 7);
             native_instr = 0;
             break;
@@ -205,21 +205,23 @@ void gen_code(uint8_t *code, Instruction *program, size_t program_len) {
         }
     }
 
-    // epilog: exit program, use lower 8bit of Adelheid as return value
+    // epilog: return lower 8bit of Adelheid as return value
     // mov rdi, Adelheid
     gen_3B_native_instr(0x89, 0b0111, register_id_lookup[Adelheid], code, &offset);
-    // mov rax, SYS_EXIT (i.e. mov rax, 0x3c)
-    *(uint64_t *)&code[offset] = 0x0000003cc0c748;
-    // syscall
-    *(uint16_t *)&code[offset + 7] = 0x050f;
+    // ret
+    code[offset] = 0xc3;
 }
 
-int run_jit(Instruction *program, size_t len) {
-    // TODO:
-    size_t expected_code_len = 0;
+uint8_t run_jit(Instruction *program, size_t len) {
+    // an instruction takes up at most 7B + prolog + epilog
+    size_t expected_code_len = 7 * len + 3 * COUNT_REGISTERS + 4;
     // page alignment
     size_t allocated_code_len = (expected_code_len + 0xFFF) & ~0xFFF;
 
+    // TODO: remove this!!
+    printf("Allocating %ld B for your code!\n", allocated_code_len);
+
+    // TODO: maybe randomly choose address to make exploitation harder
     // allocate memory for context and code
     uint8_t *code = (uint8_t *)mmap(NULL, allocated_code_len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (code == (void *)-1) {
@@ -268,13 +270,14 @@ int run_jit(Instruction *program, size_t len) {
         exit(EXIT_FAILURE);
     }
 
-    uint8_t exit_code = WEXITSTATUS(wstatus);
-
-    return exit_code;
+    return WEXITSTATUS(wstatus);
 }
 
 int main() {
     // TODO: signal handlers? SIGCHILD? seccomp?
+
+    setbuf(stdout, NULL);
+    setbuf(stdin, NULL);
 
     // TODO: better pun, add reference to pop-culture
     puts("Welcome to JIT-aaS (Just In Time - always a Surprise)");
