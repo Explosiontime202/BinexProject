@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Build with CMake
+        run: |
+          mkdir build
+          cd build
+          cmake .. -G "Unix Makefiles"
+          make
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@master
+        with:
+          name: vuln-artifact
+          path: build/vuln
+          retention-days: 1
+
+  test:
+    runs-on: ubuntu-latest
+
+    needs: build
+
+    env:
+      FNETD_PASSWORD: 1234
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/download-artifact@master
+        name: Download build artifacts
+        with:
+          name: vuln-artifact
+          path: build/
+
+      - name: Install fnetd
+        run: |
+          wget https://cloud.sec.in.tum.de/index.php/s/n5cJnDqnnpSeEpd/download/fnetd.tar.xz -O fnetd.tar.xz
+          tar -xf fnetd.tar.xz
+          mkdir fnetd/build
+          cd fnetd/build
+          cmake .. -G "Unix Makefiles"
+          make
+          cd ../..
+
+      - name: Setup get_flag
+        run: gcc tests/get_flag.c -o get_flag -O3
+
+      - uses: JarvusInnovations/background-action@v1
+        name: Start fnetd
+        with:
+          run: |-
+            chmod +x build/vuln
+            fnetd/build/fnetd -p 1337 -lt 2 -lm 536870912 "strace -f build/vuln" &
+
+          tail: true
+          wait-on: tcp:localhost:1337
+          wait-for: 1m
+
+      - name: Setup python libs
+        run: pip install -r tests/requirements.txt
+
+      - name: Tests
+        run: python -m unittest discover tests/
