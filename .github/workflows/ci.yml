@@ -24,8 +24,9 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@master
         with:
-          name: build-artifacts
-          path: build
+          name: vuln-artifact
+          path: build/vuln
+          retention-days: 1
 
   test:
     runs-on: ubuntu-latest
@@ -41,8 +42,8 @@ jobs:
       - uses: actions/download-artifact@master
         name: Download build artifacts
         with:
-          name: build-artifacts
-          path: build
+          name: vuln-artifact
+          path: build/vuln
 
       - name: Install fnetd
         run: |
@@ -60,7 +61,7 @@ jobs:
       - uses: JarvusInnovations/background-action@v1
         name: Start fnetd
         with:
-          run: pwd && ls && ls build && fnetd/build/fnetd -p 1337 -lt 2 -lm 536870912 ./build/vuln &
+          run: pwd && ls && ls build && fnetd/build/fnetd -p 1337 -lt 2 -lm 536870912 build/vuln &
 
           tail: true
           wait-on: tcp:localhost:1337
