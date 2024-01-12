@@ -43,7 +43,7 @@ jobs:
         name: Download build artifacts
         with:
           name: vuln-artifact
-          path: build/vuln
+          path: build/
 
       - name: Install fnetd
         run: |
