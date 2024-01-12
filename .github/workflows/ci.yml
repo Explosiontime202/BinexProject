@@ -61,7 +61,10 @@ jobs:
       - uses: JarvusInnovations/background-action@v1
         name: Start fnetd
         with:
-          run: pwd && ls build -la && fnetd/build/fnetd -p 1337 -lt 2 -lm 536870912 build/vuln &
+          run: |
+            ls build -la
+            chmod +x build/vuln
+            fnetd/build/fnetd -p 1337 -lt 2 -lm 536870912 build/vuln &
 
           tail: true
           wait-on: tcp:localhost:1337
