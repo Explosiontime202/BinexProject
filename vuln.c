@@ -165,7 +165,7 @@ void gen_code(uint8_t *code, Instruction *program, size_t program_len) {
                 reg1_id = register_id_lookup[instr.reg1];
                 native_instr = (0b01001000L + EXTRACT_REX_BIT(reg1_id)); // REW.X prefix (we use 64bit registers) + upper bit of the first register id
                 native_instr += 0x81L << 8;                              // opcode
-                native_instr += (0b11000000L + (reg1_id & 0b111)) << 16;           // registers: direct addressing + lower 3 bit of first reg id
+                native_instr += (0b11000000L + (reg1_id & 0b111)) << 16; // registers: direct addressing + lower 3 bit of first reg id
                 native_instr += ((size_t)program[pc].imm + acc) << 24;   // immediate
                 write_instr(code, &offset, (uint8_t *)&native_instr, 7);
                 native_instr = 0;
@@ -194,7 +194,7 @@ void gen_code(uint8_t *code, Instruction *program, size_t program_len) {
             reg1_id = register_id_lookup[instr.reg1];
             native_instr = (0b01001000L + EXTRACT_REX_BIT(reg1_id)); // REW.X prefix (we use 64bit registers) + upper bit of the first register id
             native_instr += 0xc7 << 8;                               // opcode
-            native_instr += (0b11000000L + (reg1_id & 0b111)) << 16;           // registers: direct addressing + lower 3 bit of first reg id
+            native_instr += (0b11000000L + (reg1_id & 0b111)) << 16; // registers: direct addressing + lower 3 bit of first reg id
             native_instr += ((size_t)program[pc].imm) << 24;         // immediate
             write_instr(code, &offset, (uint8_t *)&native_instr, 7);
             native_instr = 0;
@@ -275,6 +275,7 @@ uint8_t run_jit(Instruction *program, size_t len) {
 
 int main() {
     // TODO: signal handlers? SIGCHILD? seccomp?
+    // TODO: colors in message, just so that every is pissed :D
 
     setbuf(stdout, NULL);
     setbuf(stdin, NULL);
@@ -297,7 +298,7 @@ int main() {
 
         exit_code = run_jit(program, program_len);
 
-        printf("Your program exited with %d\n", exit_code);
+        printf("Your program exited with %d!\n", exit_code);
         free(program);
     }
 }
