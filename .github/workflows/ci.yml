@@ -32,20 +32,21 @@ jobs:
 
       - name: Install fnetd
         run: |
-          wget https://cloud.sec.in.tum.de/index.php/s/n5cJnDqnnpSeEpd/download/fnetd.tar.xz -O /fnetd.tar.xz
+          wget https://cloud.sec.in.tum.de/index.php/s/n5cJnDqnnpSeEpd/download/fnetd.tar.xz -O fnetd.tar.xz
           tar -xf fnetd.tar.xz
-          mkdir /fnetd/build
-          cd /fnetd/build
+          mkdir fnetd/build
+          cd fnetd/build
           cmake .. -g "Unix Makefiles"
           make
+          cd ../..
 
       - name: Setup get_flag
-        run: gcc tests/get_flag.c -o /bin/get_flag -O3
+        run: gcc tests/get_flag.c -o get_flag -O3
 
       - uses: JarvusInnovations/background-action@v1
         name: Start fnetd
         with:
-          run: /fnetd/build/fnetd -p 1337 "-lt 2 -lm 536870912 /build/vuln" &
+          run: fnetd/build/fnetd -p 1337 "-lt 2 -lm 536870912 build/vuln" &
 
           tail: true
           wait-on: tcp:localhost:1337
