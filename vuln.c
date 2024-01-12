@@ -9,9 +9,9 @@
 
 #define MAX_PROGRAM_LEN 0x1000
 
-typedef enum Opcode : uint8_t { ADD = 0, ADDI = 1, SUB = 2, COPY = 3, LOADI = 4, COUNT_OPCODES } Opcode;
+typedef enum Opcode { ADD = 0, ADDI = 1, SUB = 2, COPY = 3, LOADI = 4, COUNT_OPCODES } Opcode;
 
-typedef enum Register : uint8_t { Adelheid = 0, Berthold = 1, Cornelia = 2, Dora = 3, Engelbert = 4, Friedrich = 5, Giesela = 6, Heinrich = 7, COUNT_REGISTERS } Register;
+typedef enum Register { Adelheid = 0, Berthold = 1, Cornelia = 2, Dora = 3, Engelbert = 4, Friedrich = 5, Giesela = 6, Heinrich = 7, COUNT_REGISTERS } Register;
 
 typedef struct Instruction {
     Opcode opcode;
