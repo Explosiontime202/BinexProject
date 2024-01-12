@@ -34,7 +34,7 @@ jobs:
     needs: build
 
     env:
-      fnetd_password: 1234
+      FNETD_PASSWORD: 1234
 
     steps:
       - uses: actions/checkout@v3
