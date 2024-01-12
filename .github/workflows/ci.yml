@@ -36,7 +36,7 @@ jobs:
           tar -xf fnetd.tar.xz
           mkdir fnetd/build
           cd fnetd/build
-          cmake .. -g "Unix Makefiles"
+          cmake .. -G "Unix Makefiles"
           make
           cd ../..
 
