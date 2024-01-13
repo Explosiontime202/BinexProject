@@ -125,28 +125,35 @@ void write_instr(uint8_t *code, size_t *offset, const uint8_t *instr, size_t ins
 
 void gen_3B_native_instr(uint8_t opcode, uint8_t reg1_id, uint8_t reg2_id, uint8_t *code, size_t *offset) {
     // REW.X prefix (we use 64bit registers) + upper bit of the second register id + upper bit of the first register id
-    size_t native_instr = 0b01001000L + (EXTRACT_REX_BIT(reg2_id) << 2) + EXTRACT_REX_BIT(reg1_id);
-    native_instr += opcode << 8; // opcode
-    // registers: direct addressing + lower 3 bit of second reg id + lower 3 bit of first reg id
-    native_instr += (0b11000000L + ((reg2_id & 0b111) << 3) + (reg1_id & 0b111)) << 16;
+    code[*offset] = 0b01001000 + (EXTRACT_REX_BIT(reg2_id) << 2) + EXTRACT_REX_BIT(reg1_id);
+    code[*offset + 1] = opcode;
+    // registers: direct addressing + second reg id + first reg id
+    code[*offset + 2] = 0b11000000 + (reg2_id << 3) + reg1_id;
+    *offset += 3;
+}
 
-    write_instr(code, offset, (uint8_t *)&native_instr, 3);
-    native_instr = 0;
+void gen_immediate_native_instr(uint8_t opcode, uint8_t reg_id, uint32_t imm, uint8_t *code, size_t *offset) {
+    code[*offset] = 0b01001000 + EXTRACT_REX_BIT(reg_id); // REW.X prefix (we use 64bit registers) + upper bit of the first register id
+    code[*offset + 1] = opcode;
+    code[*offset + 2] = 0b11000000L + (reg_id & 0b111); // registers: direct addressing + lower 3 bit of first reg id
+    *(uint32_t *)(code + *offset + 3) = imm;            // immediate
+    *offset += 7;
 }
 
 void gen_code(uint8_t *code, Instruction *program, size_t program_len) {
-    // https://pyokagan.name/blog/2019-09-20-x86encoding/
+    // guides on how x64 instructions are encoded:
     // https://wiki.osdev.org/X86-64_Instruction_Encoding
+    // https://pyokagan.name/blog/2019-09-20-x86encoding/
+
     size_t offset = 0;
-    size_t acc = 0;
-    size_t native_instr = 0;
+    uint32_t acc = 0;
     uint8_t reg1_id;
     uint8_t reg2_id;
 
     // prolog: zero out registers
     for (Register reg = Adelheid; reg < COUNT_REGISTERS; ++reg) {
-        // xor reg, reg
-        gen_3B_native_instr(0x31, register_id_lookup[reg], register_id_lookup[reg], code, &offset);
+        // mov reg, 0
+        gen_immediate_native_instr(0xc7, register_id_lookup[reg], 0, code, &offset);
     }
 
     for (size_t pc = 0; pc < program_len; ++pc) {
@@ -162,13 +169,7 @@ void gen_code(uint8_t *code, Instruction *program, size_t program_len) {
                 acc += program[pc].imm;
             } else {
                 // add reg, acc
-                reg1_id = register_id_lookup[instr.reg1];
-                native_instr = (0b01001000L + EXTRACT_REX_BIT(reg1_id)); // REW.X prefix (we use 64bit registers) + upper bit of the first register id
-                native_instr += 0x81L << 8;                              // opcode
-                native_instr += (0b11000000L + (reg1_id & 0b111)) << 16; // registers: direct addressing + lower 3 bit of first reg id
-                native_instr += ((size_t)program[pc].imm + acc) << 24;   // immediate
-                write_instr(code, &offset, (uint8_t *)&native_instr, 7);
-                native_instr = 0;
+                gen_immediate_native_instr(0x81, register_id_lookup[instr.reg1], instr.imm + acc, code, &offset);
                 acc = 0;
             }
             break;
@@ -191,13 +192,7 @@ void gen_code(uint8_t *code, Instruction *program, size_t program_len) {
             if (pc < program_len && program[pc + 1].opcode == LOADI && instr.reg1 == program[pc + 1].reg1)
                 break;
 
-            reg1_id = register_id_lookup[instr.reg1];
-            native_instr = (0b01001000L + EXTRACT_REX_BIT(reg1_id)); // REW.X prefix (we use 64bit registers) + upper bit of the first register id
-            native_instr += 0xc7 << 8;                               // opcode
-            native_instr += (0b11000000L + (reg1_id & 0b111)) << 16; // registers: direct addressing + lower 3 bit of first reg id
-            native_instr += ((size_t)program[pc].imm) << 24;         // immediate
-            write_instr(code, &offset, (uint8_t *)&native_instr, 7);
-            native_instr = 0;
+            gen_immediate_native_instr(0xc7, register_id_lookup[instr.reg1], instr.imm, code, &offset);
             break;
         default:
             puts("Found invalid instruction!");
