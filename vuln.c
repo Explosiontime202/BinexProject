@@ -30,12 +30,12 @@ typedef enum Register {
     Friedrich = 5,
     Giesela = 6,
     Heinrich = 7,
-    I = 8,
-    J = 9,
-    K = 10,
-    L = 11,
-    M = 12,
-    N = 13,
+    Irmgard = 8,
+    Joachim = 9,
+    Klaus = 10,
+    Liesbeth = 11,
+    Manfred = 12,
+    Norbert = 13,
     COUNT_REGISTERS
 } Register;
 
