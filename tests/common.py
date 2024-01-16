@@ -43,39 +43,45 @@ def instr_r(opcode, reg1, reg2):
     return bytes([opcode, reg1, 0, 0, reg2, 0, 0, 0])
 
 
-def exec_program(program: bytes, debug: bool = False) -> int | None:
+def exec_program(program: bytes, assert_f, debug: bool = False) -> int | None:
     if debug:
         context.log_level = 'debug'
+    else:
+        context.log_level = 'warn'
+
     with remote("localhost", 1337, fam="ipv4") as p:
-        p.recvuntil(b"Password: ", timeout=1)
+        msg = p.recvuntil(b"Password: ", timeout=1)
+        assert_f(msg != b'')
         p.sendline(b"1234")
 
-        msg = p.recvuntil(b"always a Surprise)", timeout=1)
-        if msg == b'':
-            return None
-        print(msg.decode())
+        msg = p.recvuntil(b"always a Surprise)\n", timeout=1)
+        assert_f(msg == b'Welcome to JIT-aaS (Just In Time - always a Surprise)\n')
+
+        msg = p.recvuntil(b"? (y/N):", timeout=1)
+        assert_f(msg == b'Do you want to activate the premium version? (y/N):')
+
+        p.sendline(b"N")
+        msg = p.recvuntil(b"Using the demo version!\n")
+        assert_f(msg == b"Using the demo version!\n")
 
         msg = p.recvuntil(b"should it bee?", timeout=1)
-        if msg == b'':
-            return None
-        print(msg.decode())
+        assert_f(msg == b'Now to your next program: How long should it bee?')
 
         len_msg = str(len(program) // INSTR_LEN).encode()
-        log.info(f"Sending: {len_msg}")
+        log.debug(f"Sending: {len_msg}")
         p.sendline(len_msg)
 
         msg = p.recvuntil(b"Now your program:", timeout=1)
-        if msg == b'':
-            return None
-        print(msg.decode())
+        assert_f(msg == b'Now your program:')
 
-        log.info(f"Sending program: {list(program)}")
+        log.debug(f"Sending program: {list(program)}")
         p.send(program)
 
         msg = p.recvuntil(b"Your program exited with ", timeout=1)
-        if msg == b'':
-            return None
-        print(msg.decode())
+        assert_f(msg == b'Your program exited with ')
 
-        exit_code = int(p.recvuntil(b"!", drop=True, timeout=1))
+        exit_code_msg = p.recvuntil(b"!", drop=True, timeout=1)
+        assert_f(exit_code_msg != b'')
+
+        exit_code = int(exit_code_msg)
         return exit_code

@@ -6,7 +6,7 @@ FROM debian:bullseye
 
 
 
-RUN apt update -y && apt upgrade -y && apt install -y build-essential wget cmake tar gdb libc6-dbg python3 file
+RUN apt update -y && apt upgrade -y && apt install -y build-essential wget cmake tar gdb libc6-dbg python3 file strace
 
 
 ############### INSTALL FNETD
@@ -41,6 +41,7 @@ RUN make
 WORKDIR /
 
 RUN cp /home/pwn/build/vuln /home/pwn/vuln
+RUN cp /home/pwn/source/activation_key.txt /home/pwn/activation_key.txt
 
 RUN chmod 0755 /home/pwn/vuln
 

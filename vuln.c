@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -8,6 +9,9 @@
 #include <unistd.h>
 
 #define MAX_PROGRAM_LEN 0x1000
+#define ACTIVATION_KEY_LEN 0x80
+
+static char activation_key[ACTIVATION_KEY_LEN] = {0};
 
 typedef enum Opcode { ADD = 0, ADDI = 1, SUB = 2, COPY = 3, LOADI = 4, COUNT_OPCODES } Opcode;
 
@@ -242,41 +246,87 @@ uint8_t run_jit(Instruction *program, size_t len) {
         exit(EXIT_FAILURE);
     }
 
-    int child_pid = fork();
-    switch (child_pid) {
-    case -1:
-        puts("I'm infertile, I cannot have a child \U0001F62D");
+    if (premium_activated) {
+        // premium version does not use sandbox
+        exec_func_t exec_func = (exec_func_t)code;
+        return exec_func();
+    } else {
+        int child_pid = fork();
+        switch (child_pid) {
+        case -1:
+            puts("I'm infertile, I cannot have a child \U0001F62D");
+            exit(EXIT_FAILURE);
+        case 0:
+            // child
+            exec_code(code);
+            __builtin_unreachable();
+        default:
+            // parent
+            break;
+        }
+
+        // continue in the parent; child never gets here
+
+        // unmap allocated memory
+        if (munmap(code, allocated_code_len) != 0) {
+            puts("Cannot unmap code.");
+            exit(EXIT_FAILURE);
+        }
+
+        // wait for child and extract exit code
+        int wstatus = 0;
+        if (waitpid(child_pid, &wstatus, 0) == -1) {
+            puts("waitpid failed!");
+            exit(EXIT_FAILURE);
+        }
+
+        if (!WIFEXITED(wstatus)) {
+            puts("Program crashed! WHAT?");
+            exit(EXIT_FAILURE);
+        }
+
+        return WEXITSTATUS(wstatus);
+    }
+}
+
+void check_premium() {
+    printf("Do you want to activate the premium version? (y/N):");
+    char answer[3] = {0};
+    if (fgets(answer, sizeof(answer), stdin) == NULL) {
         exit(EXIT_FAILURE);
-    case 0:
-        // child
-        exec_code(code);
-        __builtin_unreachable();
-    default:
-        // parent
+    }
+
+    switch (answer[0]) {
+    case 'y':
         break;
+    default:
+        premium_activated = false;
+        return;
     }
 
-    // continue in the parent; child never gets here
-
-    // unmap allocated memory
-    if (munmap(code, allocated_code_len) != 0) {
-        puts("Cannot unmap code.");
+    int secret_fd = open("activation_key.txt", O_RDONLY);
+    if (secret_fd < 0) {
+        puts("Cannot open activation key file!");
         exit(EXIT_FAILURE);
     }
 
-    // wait for child and extract exit code
-    int wstatus = 0;
-    if (waitpid(child_pid, &wstatus, 0) == -1) {
-        puts("waitpid failed!");
+    read(secret_fd, activation_key, sizeof(activation_key));
+    close(secret_fd);
+
+    printf("Then please enter your activation key:");
+    char buf[ACTIVATION_KEY_LEN] = {0};
+
+    ssize_t read_bytes = read(0, buf, sizeof(buf));
+    if (read_bytes <= 0) {
+        puts("Cannot read activation key from user!");
         exit(EXIT_FAILURE);
     }
 
-    if (!WIFEXITED(wstatus)) {
-        puts("Program crashed! WHAT?");
-        exit(EXIT_FAILURE);
+    if (buf[read_bytes - 1] == '\n') {
+        buf[read_bytes - 1] = 0;
     }
 
-    return WEXITSTATUS(wstatus);
+    premium_activated = memcmp(activation_key, buf, sizeof(activation_key)) == 0;
 }
 
 int main() {
@@ -289,12 +339,18 @@ int main() {
     // TODO: better pun, add reference to pop-culture
     puts("Welcome to JIT-aaS (Just In Time - always a Surprise)");
 
+    check_premium();
+    if (premium_activated) {
+        puts("Using premium version! No sandbox for you!");
+    } else {
+        puts("Using the demo version!");
+    }
+
     Instruction *program;
     size_t program_len;
     int exit_code;
 
     while (true) {
-        // TODO: check for password and enable premium mode
         program = get_program(&program_len);
         if (!validate_program(program, program_len)) {
             puts("Your program is not valid. You possibly use invalid opcodes or registers!");
