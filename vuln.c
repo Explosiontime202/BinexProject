@@ -358,9 +358,6 @@ void check_premium() {
 }
 
 int main() {
-    // TODO: signal handlers? SIGCHILD? seccomp?
-    // TODO: colors in message, just so that everyone is pissed :D
-
     setbuf(stdout, NULL);
     setbuf(stdin, NULL);
 
