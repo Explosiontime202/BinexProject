@@ -58,6 +58,7 @@ build
 
 /.idea
 /.vscode
+/.cache
 
 debug_docker/**/*
 !/debug_docker/Dockerfile
