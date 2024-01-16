@@ -54,8 +54,8 @@ def exec_program(program: bytes, assert_f, debug: bool = False) -> int | None:
         assert_f(msg != b'')
         p.sendline(b"1234")
 
-        msg = p.recvuntil(b"WMaaS - Weird machines as a Service\n", timeout=1)
-        assert_f(msg == b'WMaaS - Weird machines as a Service\n')
+        msg = p.recvuntil(b"COPaaS - Compiler-oriented programming as a service\n", timeout=1)
+        assert_f(msg == b'COPaaS - Compiler-oriented programming as a service\n')
 
         msg = p.recvuntil(b"? (y/N):", timeout=1)
         assert_f(msg == b'Do you want to activate the premium version? (y/N):')

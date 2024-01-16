@@ -361,7 +361,7 @@ int main() {
     setbuf(stdout, NULL);
     setbuf(stdin, NULL);
 
-    puts("WMaaS - Weird machines as a Service");
+    puts("COPaaS - Compiler-oriented programming as a service");
 
     check_premium();
     if (premium_activated) {
