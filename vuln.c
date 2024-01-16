@@ -51,7 +51,7 @@ typedef struct Instruction {
 
 typedef int (*exec_func_t)();
 
-static __attribute__((unused)) bool premium_activated = false;
+static bool premium_activated = false;
 
 // Take a look at https://wiki.osdev.org/X86-64_Instruction_Encoding#Registers for more information.
 static uint8_t register_id_lookup[COUNT_REGISTERS] = {
