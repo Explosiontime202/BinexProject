@@ -209,7 +209,8 @@ void gen_code(uint8_t *code, Instruction *program, size_t program_len) {
         switch (instr.opcode) {
         case ADD:
             // add reg1, reg2
-            gen_3B_native_instr(0x01, register_id_lookup[instr.reg1], register_id_lookup[instr.reg2], code, &offset);
+            // this encoding flips the register usage, so we need to put them in the other way around here (hint: not the bug)
+            gen_3B_native_instr(0x03, register_id_lookup[instr.reg2], register_id_lookup[instr.reg1], code, &offset);
             break;
         case ADDI:
             // optimization: fold multiple consecutive ADDI instructions to the same register into one
