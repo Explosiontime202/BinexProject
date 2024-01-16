@@ -21,6 +21,12 @@ class Register(IntEnum):
     F = 5
     G = 6
     H = 7
+    I = 8
+    J = 9
+    K = 10
+    L = 11
+    M = 12
+    N = 13
 
 
 INSTR_LEN = 8

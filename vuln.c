@@ -11,7 +11,23 @@
 
 typedef enum Opcode { ADD = 0, ADDI = 1, SUB = 2, COPY = 3, LOADI = 4, COUNT_OPCODES } Opcode;
 
-typedef enum Register { Adelheid = 0, Berthold = 1, Cornelia = 2, Dora = 3, Engelbert = 4, Friedrich = 5, Giesela = 6, Heinrich = 7, COUNT_REGISTERS } Register;
+typedef enum Register {
+    Adelheid = 0,
+    Berthold = 1,
+    Cornelia = 2,
+    Dora = 3,
+    Engelbert = 4,
+    Friedrich = 5,
+    Giesela = 6,
+    Heinrich = 7,
+    I = 8,
+    J = 9,
+    K = 10,
+    L = 11,
+    M = 12,
+    N = 13,
+    COUNT_REGISTERS
+} Register;
 
 typedef struct Instruction {
     Opcode opcode;
@@ -37,11 +53,17 @@ static uint8_t register_id_lookup[COUNT_REGISTERS] = {
     0b0111, // F to rdi
     0b1000, // G to r8
     0b1001, // H to r9
+    0b1010, // I to r10
+    0b1011, // J to r11
+    0b1100, // K to r12
+    0b1101, // L to r13
+    0b1110, // M to r14
+    0b1111, // N to r15
 };
 
 #define EXTRACT_REX_BIT(x) ((x >> 3) & 1)
 
-size_t get_size_t(size_t limit) {
+size_t get_size_t(size_t min, size_t limit) {
     size_t val;
     char buf[0x10] = {0};
     char *end_ptr;
@@ -56,7 +78,7 @@ size_t get_size_t(size_t limit) {
             exit(EXIT_FAILURE);
         }
 
-        if (val <= limit)
+        if (val <= limit && val >= min)
             break;
 
         puts("Nah, that's too long. Let's try again.");
@@ -66,7 +88,7 @@ size_t get_size_t(size_t limit) {
 
 Instruction *get_program(size_t *program_len) {
     printf("Now to your next program: How long should it bee?");
-    size_t len = get_size_t(MAX_PROGRAM_LEN);
+    size_t len = get_size_t(1, MAX_PROGRAM_LEN);
 
     Instruction *program = malloc(len * sizeof(Instruction));
 
@@ -113,14 +135,6 @@ void exec_code(uint8_t *code) {
     init_seccomp();
     uint8_t res = exec_func();
     _exit(res);
-}
-
-void write_instr(uint8_t *code, size_t *offset, const uint8_t *instr, size_t instr_len) {
-    for (size_t i = 0; i < instr_len; ++i) {
-        code[*offset + i] = instr[i];
-    }
-
-    *offset += instr_len;
 }
 
 void gen_3B_native_instr(uint8_t opcode, uint8_t reg1_id, uint8_t reg2_id, uint8_t *code, size_t *offset) {
@@ -208,13 +222,10 @@ void gen_code(uint8_t *code, Instruction *program, size_t program_len) {
 }
 
 uint8_t run_jit(Instruction *program, size_t len) {
-    // an instruction takes up at most 7B + prolog + epilog
+    // an instruction takes up to 7B + prolog + epilog
     size_t expected_code_len = 7 * len + 3 * COUNT_REGISTERS + 4;
     // page alignment
     size_t allocated_code_len = (expected_code_len + 0xFFF) & ~0xFFF;
-
-    // TODO: remove this!!
-    printf("Allocating %ld B for your code!\n", allocated_code_len);
 
     // TODO: maybe randomly choose address to make exploitation harder
     // allocate memory for context and code
@@ -270,7 +281,7 @@ uint8_t run_jit(Instruction *program, size_t len) {
 
 int main() {
     // TODO: signal handlers? SIGCHILD? seccomp?
-    // TODO: colors in message, just so that every is pissed :D
+    // TODO: colors in message, just so that everyone is pissed :D
 
     setbuf(stdout, NULL);
     setbuf(stdin, NULL);
