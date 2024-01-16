@@ -1,10 +1,16 @@
 #include <fcntl.h>
+#include <linux/audit.h>
+#include <linux/filter.h>
+#include <linux/seccomp.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/prctl.h>
+#include <sys/syscall.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -127,8 +133,29 @@ bool validate_program(Instruction *program, size_t len) {
     return true;
 }
 
-void init_seccomp() {
-    // TODO:
+int init_seccomp() {
+#define ALLOW(NR) BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, (NR), 0, 1), BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_ALLOW)
+    struct sock_filter filter[] = {
+        BPF_STMT(BPF_LD + BPF_W + BPF_ABS, offsetof(struct seccomp_data, arch)),
+        BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, AUDIT_ARCH_X86_64, 1, 0),
+        BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_KILL),
+
+        BPF_STMT(BPF_LD + BPF_W + BPF_ABS, offsetof(struct seccomp_data, nr)),
+        ALLOW(SYS_read),
+        ALLOW(SYS_write),
+        ALLOW(SYS_execve),
+        ALLOW(SYS_exit_group),
+
+        BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_KILL),
+    };
+#undef ALLOW
+
+    struct sock_fprog prog = {
+        .len = sizeof(filter) / sizeof(*filter),
+        .filter = filter,
+    };
+
+    return prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) || prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog);
 }
 
 void exec_code(uint8_t *code) {
@@ -136,7 +163,10 @@ void exec_code(uint8_t *code) {
     close(0);
     close(1);
     close(2);
-    init_seccomp();
+    if (init_seccomp()) {
+        puts("Cannot enable seccomp jail!");
+        exit(EXIT_FAILURE);
+    }
     uint8_t res = exec_func();
     _exit(res);
 }
@@ -219,15 +249,13 @@ void gen_code(uint8_t *code, Instruction *program, size_t program_len) {
     }
 
     // epilog: return lower 8bit of Adelheid as return value
-    // mov rdi, Adelheid
-    gen_3B_native_instr(0x89, 0b0111, register_id_lookup[Adelheid], code, &offset);
     // ret
     code[offset] = 0xc3;
 }
 
 uint8_t run_jit(Instruction *program, size_t len) {
     // an instruction takes up to 7B + prolog + epilog
-    size_t expected_code_len = 7 * len + 3 * COUNT_REGISTERS + 4;
+    size_t expected_code_len = 7 * len + 3 * COUNT_REGISTERS + 1;
     // page alignment
     size_t allocated_code_len = (expected_code_len + 0xFFF) & ~0xFFF;
 
@@ -336,8 +364,7 @@ int main() {
     setbuf(stdout, NULL);
     setbuf(stdin, NULL);
 
-    // TODO: better pun, add reference to pop-culture
-    puts("Welcome to JIT-aaS (Just In Time - always a Surprise)");
+    puts("WMaaS - Weird machines as a Service");
 
     check_premium();
     if (premium_activated) {
