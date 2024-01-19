@@ -116,8 +116,7 @@ jobs:
         name: Start fnetd debug
         with:
           run: |-
-            echo $${{ env.DEBUG_PORT }}
-            echo $DEBUG_PORT
+            env
             fnetd/build/fnetd -p $DEBUG_PORT -lt 2 -lm 536870912 "strace -f debug/vuln" &
 
           tail: true
@@ -128,12 +127,11 @@ jobs:
         name: Start fnetd release
         with:
           run: |-
-            echo $${{ env.RELEASE_PORT }}
-            echo $RELEASE_PORT
+            env
             fnetd/build/fnetd -p $RELEASE_PORT -lt 2 -lm 536870912 "strace -f release/vuln" &
 
           tail: true
-          wait-on: tcp:localhost:$${{ env.RELEASE_PORT }}
+          wait-on: tcp:localhost:${{env.RELEASE_PORT}}
           wait-for: 1m
 
       - name: Setup python libs
