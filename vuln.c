@@ -339,7 +339,10 @@ void check_premium() {
         exit(EXIT_FAILURE);
     }
 
-    read(secret_fd, activation_key, sizeof(activation_key));
+    if (read(secret_fd, activation_key, sizeof(activation_key)) < 0) {
+        puts("Cannot read reference activation key.");
+        exit(EXIT_FAILURE);
+    }
     close(secret_fd);
 
     printf("Then please enter your activation key:");
