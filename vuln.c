@@ -171,6 +171,15 @@ void exec_code(uint8_t *code) {
     _exit(res);
 }
 
+size_t gen_random_address() {
+    int rand_fd = open("/dev/random", O_RDONLY);
+    size_t random_addr;
+    read(rand_fd, &random_addr, sizeof(random_addr));
+    close(rand_fd);
+
+    return random_addr & 0xFFFFFFFF000;
+}
+
 void gen_3B_native_instr(uint8_t opcode, uint8_t reg1_id, uint8_t reg2_id, uint8_t *code, size_t *offset) {
     // REW.X prefix (we use 64bit registers) + upper bit of the second register id + upper bit of the first register id
     code[*offset] = 0b01001000 + (EXTRACT_REX_BIT(reg2_id) << 2) + EXTRACT_REX_BIT(reg1_id);
@@ -260,10 +269,11 @@ uint8_t run_jit(Instruction *program, size_t len) {
     // page alignment
     size_t allocated_code_len = (expected_code_len + 0xFFF) & ~0xFFF;
 
-    // TODO: maybe randomly choose address to make exploitation harder
+    size_t random_addr = gen_random_address();
+
     // allocate memory for context and code
-    uint8_t *code = (uint8_t *)mmap(NULL, allocated_code_len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (code == (void *)-1) {
+    uint8_t *code = (uint8_t *)mmap((void *)random_addr, allocated_code_len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+    if (code == MAP_FAILED) {
         puts("Cannot mmap memory for code.");
         exit(EXIT_FAILURE);
     }
