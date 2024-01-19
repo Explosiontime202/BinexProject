@@ -158,19 +158,6 @@ int init_seccomp() {
     return prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) || prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog);
 }
 
-void exec_code(uint8_t *code) {
-    exec_func_t exec_func = (exec_func_t)code;
-    close(0);
-    close(1);
-    close(2);
-    if (init_seccomp()) {
-        puts("Cannot enable seccomp jail!");
-        exit(EXIT_FAILURE);
-    }
-    uint8_t res = exec_func();
-    _exit(res);
-}
-
 size_t gen_random_address() {
     int rand_fd = open("/dev/random", O_RDONLY);
     size_t random_addr;
@@ -178,6 +165,28 @@ size_t gen_random_address() {
     close(rand_fd);
 
     return random_addr & 0xFFFFFFFF000;
+}
+
+void exec_code(uint8_t *code) {
+    register exec_func_t exec_func = (exec_func_t)code;
+
+    // allocate a new stack at a random address => no stale addresses left (remember: stack grows down!)
+    void *custom_stack_addr = (void *)gen_random_address() + 0x1000;
+    if (mmap(custom_stack_addr - 0x1000, 0x1000, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0) == MAP_FAILED) {
+        puts("Cannot allocate custom stack!");
+        exit(EXIT_FAILURE);
+    }
+
+    close(0);
+    close(1);
+    close(2);
+    if (init_seccomp()) {
+        puts("Cannot enable seccomp jail!");
+        exit(EXIT_FAILURE);
+    }
+    __asm__ __volatile__("mov %0, %%rsp" : : "r"(custom_stack_addr) : /*"rsp"*/);
+    uint8_t res = exec_func();
+    _exit(res);
 }
 
 void gen_3B_native_instr(uint8_t opcode, uint8_t reg1_id, uint8_t reg2_id, uint8_t *code, size_t *offset) {
