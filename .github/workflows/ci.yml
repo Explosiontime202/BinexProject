@@ -117,10 +117,11 @@ jobs:
         with:
           run: |-
             echo $${{ env.DEBUG_PORT }}
+            echo $DEBUG_PORT
             fnetd/build/fnetd -p $DEBUG_PORT -lt 2 -lm 536870912 "strace -f debug/vuln" &
 
           tail: true
-          wait-on: tcp:localhost:$${{ env.DEBUG_PORT }}
+          wait-on: tcp:localhost:8081
           wait-for: 1m
 
       - uses: JarvusInnovations/background-action@v1
@@ -128,6 +129,7 @@ jobs:
         with:
           run: |-
             echo $${{ env.RELEASE_PORT }}
+            echo $RELEASE_PORT
             fnetd/build/fnetd -p $RELEASE_PORT -lt 2 -lm 536870912 "strace -f release/vuln" &
 
           tail: true
