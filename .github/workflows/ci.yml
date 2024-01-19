@@ -116,7 +116,7 @@ jobs:
         name: Start fnetd debug
         with:
           run: |-
-            chmod +x release/vuln
+            chmod +x debug/vuln
             fnetd/build/fnetd -p $DEBUG_PORT -lt 2 -lm 536870912 "strace -f debug/vuln" &
 
           tail: true
