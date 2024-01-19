@@ -102,6 +102,16 @@ jobs:
           cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
           make
 
+      - name: Install fnetd
+        run: |
+          wget https://cloud.sec.in.tum.de/index.php/s/n5cJnDqnnpSeEpd/download/fnetd.tar.xz -O fnetd.tar.xz
+          tar -xf fnetd.tar.xz
+          mkdir fnetd/build
+          cd fnetd/build
+          cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+          make
+          cd ../..
+
       - uses: JarvusInnovations/background-action@v1
         name: Start fnetd debug
         with:
