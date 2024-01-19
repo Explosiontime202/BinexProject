@@ -116,7 +116,7 @@ jobs:
         name: Start fnetd debug
         with:
           run: |-
-            chmod +x debug/vuln
+            echo $${{ env.DEBUG_PORT }}
             fnetd/build/fnetd -p $DEBUG_PORT -lt 2 -lm 536870912 "strace -f debug/vuln" &
 
           tail: true
@@ -127,7 +127,7 @@ jobs:
         name: Start fnetd release
         with:
           run: |-
-            chmod +x release/vuln
+            echo $${{ env.RELEASE_PORT }}
             fnetd/build/fnetd -p $RELEASE_PORT -lt 2 -lm 536870912 "strace -f release/vuln" &
 
           tail: true
