@@ -120,7 +120,7 @@ jobs:
             fnetd/build/fnetd -p $DEBUG_PORT -lt 2 -lm 536870912 "strace -f debug/vuln" &
 
           tail: true
-          wait-on: tcp:localhost:1337
+          wait-on: tcp:localhost:$${{ env.DEBUG_PORT }}
           wait-for: 1m
 
       - uses: JarvusInnovations/background-action@v1
@@ -131,7 +131,7 @@ jobs:
             fnetd/build/fnetd -p $RELEASE_PORT -lt 2 -lm 536870912 "strace -f release/vuln" &
 
           tail: true
-          wait-on: tcp:localhost:1337
+          wait-on: tcp:localhost:$${{ env.RELEASE_PORT }}
           wait-for: 1m
 
       - name: Setup python libs
