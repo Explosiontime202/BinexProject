@@ -88,18 +88,19 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Build docker container
-        uses: JarvusInnovations/background-action@v1
+      - uses: JarvusInnovations/background-action@v1
+        name: Build docker container
         with:
           run: |
             cp tests/Dockerfile .
             docker build -t exploit_test --build-arg RELEASE_PORT=$RELEASE_PORT --build-arg DEBUG_PORT=$DEBUG_PORT --build-arg FNETD_PASSWORD=$FNETD_PASSWORD .
-            docker run -p $RELEASE_PORT:$RELEASE_PORT -p $DEBUG_PORT:$DEBUG_PORT
-          tail: true
-          wait-on: |
-            tcp:localhost:${{ DEBUG_PORT }}
-            tcp:localhost:${{ RELEASE_PORT }}
-          wait-for: 1m
+#            docker run -p $RELEASE_PORT:$RELEASE_PORT -p $DEBUG_PORT:$DEBUG_PORT
+
+#          tail: true
+#          wait-on: |
+#            tcp:localhost:${{ DEBUG_PORT }}
+#            tcp:localhost:${{ RELEASE_PORT }}
+#          wait-for: 1m
 
       - name: Setup python libs
         run: pip install -r tests/requirements.txt
