@@ -1,6 +1,6 @@
 FROM debian:bullseye
 
-RUN apt update -y && apt upgrade -y && apt install -y build-essential wget cmake screen
+RUN apt update -y && apt upgrade -y && apt install -y build-essential wget cmake
 
 ############### INSTALL FNETD
 RUN wget https://cloud.sec.in.tum.de/index.php/s/n5cJnDqnnpSeEpd/download/fnetd.tar.xz -O /fnetd.tar.xz
@@ -32,13 +32,13 @@ RUN mkdir /home/pwn/debug
 WORKDIR /home/pwn/debug
 RUN cmake /home/pwn/source -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug
 RUN make
-RUN cp /home/pwn/source/activation_key.txt activation_key.txt
 
 RUN mkdir /home/pwn/release
 WORKDIR /home/pwn/release
 RUN cmake /home/pwn/source -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
 RUN make
-RUN cp /home/pwn/source/activation_key.txt activation_key.txt
+
+RUN chown -R pwn:pwn /home/pwn
 
 ARG FNETD_PASSWORD
 ENV FNETD_PASSWORD $FNETD_PASSWORD
@@ -49,10 +49,11 @@ ENV PORT_RELEASE $RELEASE_PORT
 ARG DEBUG_PORT
 ENV PORT_DEBUG $DEBUG_PORT
 
-EXPOSE $PORT_DEBUG
-EXPOSE $PORT_DEBUG
+EXPOSE $DEBUG_PORT
+EXPOSE $RELEASE_PORT
 
-RUN screen -S release -dm bash -c "/fnetd/build/fnetd -p $RELEASE_PORT -u pwn -lt 2 -lm 536870912 /home/pwn/release/vuln; exec sh"
-RUN screen -S debug -dm bash -c "/fnetd/build/fnetd -p $DEBUG_PORT -u pwn -lt 2 -lm 536870912 /home/pwn/debug/vuln; exec sh"
+WORKDIR /home/pwn
+RUN cp /home/pwn/source/activation_key.txt activation_key.txt
 
-CMD ["/bin/bash"]
+
+ENTRYPOINT ["sh", "-c", "/fnetd/build/fnetd -p $PORT_DEBUG -u pwn -lt 2 -lm 536870912 /home/pwn/debug/vuln & /fnetd/build/fnetd -p $PORT_RELEASE -u pwn -lt 2 -lm 536870912 /home/pwn/release/vuln"]
