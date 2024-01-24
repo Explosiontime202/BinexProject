@@ -1,0 +1,58 @@
+\documentclass{beamer}
+
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage[style=alphabetic,giveninits=true,terseinits=true]{biblatex}
+
+\definecolor{tumblue}{RGB}{0,101,189}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\lstset{
+    basicstyle=\footnotesize\ttfamily,%
+    columns=fullflexible,%
+    keywordstyle=\bfseries\color{blue},%
+    commentstyle=\color{dkgreen},%
+    stringstyle=\color{mauve},%
+}
+
+\DeclareFieldFormat{url}{\href{#1}{\resizebox{!}{2ex}{\lower3pt\hbox{\pgfuseimage{beamericononline}}}}}
+\addbibresource{slides.bib}
+
+\setbeamerfont{footnote}{size=\tiny}
+\renewcommand\footnoterule{}
+\usecolortheme{orchid}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{sidebar right}{% also implies no navbar
+    \llap{\tikz\fill[tumblue,scale=.1] (0,0) ++(-5cm,-5cm) ++(-10cm,0)
+        +(0cm,0cm) -- +(4cm,0cm) -- +(4cm,-4cm) -- +(5cm,-4cm) -- +(5cm,0cm) --
+        +(10cm,0cm) -- +(10cm,-5cm) -- +(9cm,-5cm) -- +(9cm,-1cm) --
+        +(8cm,-1cm) -- +(8cm,-5cm) -- +(7cm,-5cm) -- +(7cm,-1cm) --
+        +(6cm,-1cm) -- +(6cm,-5cm) -- +(3cm,-5cm) -- +(3cm,-1cm) --
+        +(2cm,-1cm) -- +(2cm,-5cm) -- +(1cm,-5cm) -- +(1cm,-1cm) --
+        +(0cm,-1cm) -- cycle;}
+    % Slide number in triangle.
+    \vfill\llap{\tikz\path[fill=tumblue,inner sep=3pt] (0,0) -- ++(-1cm,0) -- +(1cm,1cm) -- cycle node[anchor=south east] {\usebeamerfont{footline}\color{white}\bfseries\insertframenumber};}%
+% Variant without triangle
+%\vfill\llap{\usebeamerfont{footline}\usebeamercolor[fg]{footline}\insertframenumber\hskip3pt}\vskip3pt%
+}
+
+\title{Nice Presentation Title}
+\author{Your Name \and Your Co-author's Name}
+\institute{School of Computation, Information, and Technology\\Technical University of Munich}
+\date{Future}
+
+\begin{document}
+
+    \begin{frame}
+        \titlepage
+    \end{frame}
+
+    \begin{frame}{Organization}
+        \begin{itemize}
+            % Don't forget to adjust the \addbibresource above.
+            \item Citation example, if you really need it\footfullcite{nielson2003marching}
+        \end{itemize}
+    \end{frame}
+
+\end{document}
