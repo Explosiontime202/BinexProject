@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    name: Build vuln
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -22,7 +22,7 @@ jobs:
           make
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v3
         with:
           name: vuln-artifact
           path: build/vuln
@@ -30,7 +30,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-
+    name: Test correct program
     needs: build
 
     env:
@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: actions/download-artifact@master
+      - uses: actions/download-artifact@v3
         name: Download build artifacts
         with:
           name: vuln-artifact
@@ -51,26 +51,66 @@ jobs:
           tar -xf fnetd.tar.xz
           mkdir fnetd/build
           cd fnetd/build
-          cmake .. -G "Unix Makefiles"
+          cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
           make
           cd ../..
 
       - name: Setup get_flag
         run: gcc tests/get_flag.c -o get_flag -O3
 
-      - uses: JarvusInnovations/background-action@v1
+      - uses: JarvusInnovations/background-action@v1.0.5
         name: Start fnetd
         with:
-          run: |-
+          run: |
             chmod +x build/vuln
-            fnetd/build/fnetd -p 1337 -lt 2 -lm 536870912 "strace -f build/vuln" &
+            fnetd/build/fnetd -p 1337 -lt 2 -lm 536870912 build/vuln &
 
           tail: true
           wait-on: tcp:localhost:1337
-          wait-for: 1m
+          wait-for: 10s
 
       - name: Setup python libs
         run: pip install -r tests/requirements.txt
 
-      - name: Tests
-        run: python -m unittest discover tests/
+      - name: Run tests
+        # idk why we need to pipe the output to /dev/null here, but else the pipeline does not finish
+        run: python -m unittest discover tests/ &> /dev/null
+
+  test_exploit:
+    runs-on: ubuntu-latest
+    name: Test exploit
+    needs: build
+
+    env:
+      FNETD_PASSWORD: 1234
+      RELEASE_PORT: 8080
+      DEBUG_PORT: 8081
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: JarvusInnovations/background-action@v1
+        name: Build docker container
+        with:
+          run: |
+            cp tests/Dockerfile .
+            sh -c "docker build --no-cache -t exploit_test --build-arg RELEASE_PORT=$RELEASE_PORT --build-arg DEBUG_PORT=$DEBUG_PORT --build-arg FNETD_PASSWORD=$FNETD_PASSWORD ."
+            sh -c "docker run -d -p $RELEASE_PORT:$RELEASE_PORT -p $DEBUG_PORT:$DEBUG_PORT --name exploit_test exploit_test"
+
+          tail: true
+          wait-on: |
+            tcp:localhost:${{ env.DEBUG_PORT }}
+            tcp:localhost:${{ env.RELEASE_PORT }}
+          wait-for: 2m
+
+      - name: Setup python libs
+        run: pip install -r tests/requirements.txt
+
+      - name: Run exploit tests
+        # idk why we need to pipe the output to /dev/null here, but else the pipeline does not finish
+        run: |
+          python3 exploit/test_exploit.py -f activation_key.txt &> log.txt
+          cat log.txt
+
+      - name: Stop docker
+        run: docker stop exploit_test
