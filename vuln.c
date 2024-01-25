@@ -158,8 +158,25 @@ int init_seccomp() {
     return prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) || prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog);
 }
 
+size_t gen_random_address() {
+    int rand_fd = open("/dev/random", O_RDONLY);
+    size_t random_addr;
+    read(rand_fd, &random_addr, sizeof(random_addr));
+    close(rand_fd);
+
+    return random_addr & 0xFFFFFFFF000;
+}
+
 void exec_code(uint8_t *code) {
-    exec_func_t exec_func = (exec_func_t)code;
+    register exec_func_t exec_func = (exec_func_t)code;
+
+    // allocate a new stack at a random address => no stale addresses left (remember: stack grows down!)
+    void *custom_stack_addr = (void *)gen_random_address() + 0x1000;
+    if (mmap(custom_stack_addr - 0x1000, 0x1000, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0) == MAP_FAILED) {
+        puts("Cannot allocate custom stack!");
+        exit(EXIT_FAILURE);
+    }
+
     close(0);
     close(1);
     close(2);
@@ -167,6 +184,7 @@ void exec_code(uint8_t *code) {
         puts("Cannot enable seccomp jail!");
         exit(EXIT_FAILURE);
     }
+    __asm__ __volatile__("mov %0, %%rsp" : : "r"(custom_stack_addr) : /*"rsp"*/);
     uint8_t res = exec_func();
     _exit(res);
 }
@@ -260,10 +278,11 @@ uint8_t run_jit(Instruction *program, size_t len) {
     // page alignment
     size_t allocated_code_len = (expected_code_len + 0xFFF) & ~0xFFF;
 
-    // TODO: maybe randomly choose address to make exploitation harder
+    size_t random_addr = gen_random_address();
+
     // allocate memory for context and code
-    uint8_t *code = (uint8_t *)mmap(NULL, allocated_code_len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (code == (void *)-1) {
+    uint8_t *code = (uint8_t *)mmap((void *)random_addr, allocated_code_len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+    if (code == MAP_FAILED) {
         puts("Cannot mmap memory for code.");
         exit(EXIT_FAILURE);
     }
