@@ -131,9 +131,9 @@
             \begin{itemize}
                 \item Faulty encoding of instructions using \lstinline{r[8-15]}
                 \item[$\Rightarrow$] Register ids are 4bit long
-                \item Example: encode \lstinline{mov r8, r9}
+                \item Example: encode ModR/M for \lstinline{mov r8, r9}
                 \item Register ids: $\text r8 = 0\text b1000, \text r9 = 0\text b1001$
-                \[\text{Mod R/M} = \textcolor<4>{blue}{0\text{b}1100\_0000} + \textcolor<5>{blue}{(\text{reg2\_id} \ll 3)} + \textcolor<6>{red}{\text{reg1\_id}}\]
+                \[\text{Mod R/M} = \textcolor<4>{blue}{0\text{b}1100\_0000} + \textcolor<5>{blue}{(\text{reg2\_id} \ll 3)} + \textcolor<6>{blue}{\text{reg1\_id}}\]
             \end{itemize}
 
             \begin{center}
