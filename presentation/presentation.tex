@@ -1,9 +1,13 @@
-\documentclass{beamer}
+\documentclass[usenames,dvipsnames]{beamer}
 
+\usepackage{xcolor}
 \usepackage[utf8]{inputenc}
 \usepackage{listings}
 \usepackage{tikz}
 \usepackage[style=alphabetic,giveninits=true,terseinits=true]{biblatex}
+\usepackage{graphicx}
+
+\usetikzlibrary{matrix, positioning, decorations.pathreplacing, overlay-beamer-styles}
 
 \definecolor{tumblue}{RGB}{0,101,189}
 \definecolor{dkgreen}{rgb}{0,0.6,0}
@@ -37,8 +41,10 @@
 %\vfill\llap{\usebeamerfont{footline}\usebeamercolor[fg]{footline}\insertframenumber\hskip3pt}\vskip3pt%
 }
 
-\title{Nice Presentation Title}
-\author{Your Name \and Your Co-author's Name}
+\graphicspath{ {./images/} }
+
+\title{CoPaaS - Compiler-oriented Programming as a Service}
+\author{Simon Bußmann \and Johannes Maier}
 \institute{School of Computation, Information, and Technology\\Technical University of Munich}
 \date{Future}
 
@@ -48,11 +54,130 @@
         \titlepage
     \end{frame}
 
-    \begin{frame}{Organization}
+%    \begin{frame}{Organization}
+%        \begin{itemize}
+%            % Don't forget to adjust the \addbibresource above.
+%            \item Citation example, if you really need it\footfullcite{nielson2003marching}
+%        \end{itemize}
+%    \end{frame}
+
+    \begin{frame}{The Story}
+
+    \end{frame}
+
+    \begin{frame}{x86-64 Instruction Encoding Basics}
+        \begin{columns}
+            \begin{column}{0.35\textwidth}
+
+                Pars of an instruction:
+                \begin{itemize}
+                    \item \textcolor<2>{blue}{Prefixes}
+                    \item Opcode
+                    \item \textcolor<3-5>{blue}{ModR/M}
+                    \item SIB
+                    \item Displacement
+                    \item Immediate
+                \end{itemize}
+            \end{column}
+            \begin{column}{0.65\textwidth}
+                \begin{tikzpicture}[scale=0.75]
+
+                    % REX.W prefix
+                    \matrix (rex) at (0,0) [
+                    matrix of nodes,
+                    nodes={draw, minimum size=18pt, anchor=center},
+                    column sep=-\pgflinewidth,
+                    row sep=-\pgflinewidth,
+                    ampersand replacement=\&
+                    ] {
+                        0 \& 1\& 0 \& 0 \& \textcolor<2>{blue}{W} \& \textcolor<2>{blue}{R} \& X \& \textcolor<2>{blue}{B} \\
+                    };
+
+                    % ModR/M byte
+                    \matrix (modrm) [
+                        below=20pt of rex,
+                        matrix of nodes,
+                        nodes={draw, minimum size=18pt, anchor=center},
+                        column sep=-\pgflinewidth,
+                        row sep=-\pgflinewidth,
+                        ampersand replacement=\&
+                    ] {
+                        \textcolor<3>{blue}{1} \& \textcolor<3>{blue}{1} \& \textcolor<4>{blue}{0} \& \textcolor<4>{blue}{1} \& \textcolor<4>{blue}{0} \& \textcolor<5>{blue}{0} \& \textcolor<5>{blue}{0} \& \textcolor<5>{blue}{0} \\
+                    };
+
+                    % Labels
+                    \node[anchor=east] at (rex.west) {REX.W};
+                    \node[anchor=east] at (modrm.west) {ModR/M};
+
+                    % Brackets for ModR/M parts
+                    \draw[semithick, decorate, decoration={brace, amplitude=10pt, mirror, raise=4pt}, alt=<3>{blue}{black}] (modrm-1-1.south west) -- (modrm-1-2.south east) node[midway, below=14pt] {\textcolor<3>{blue}{Modifier}};
+                    \draw[semithick, decorate, decoration={brace, amplitude=10pt, mirror, raise=4pt}, alt=<4>{blue}{black}] (modrm-1-3.south west) -- (modrm-1-5.south east) node[midway, below=14pt, xshift=-4pt] {\textcolor<4>{blue}{Reg}};
+                    \draw[semithick, decorate, decoration={brace, amplitude=10pt, mirror, raise=4pt}, alt=<5>{blue}{black}] (modrm-1-6.south west) -- (modrm-1-8.south east) node[midway, below=14pt] {\textcolor<5>{blue}{RM}};
+
+                \end{tikzpicture}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+    \begin{frame}{The Bug}
+        \only<2-3> {
+            \begin{figure}
+                \centering
+                \includegraphics[scale=0.65]{bug}
+            \end{figure}
+        }
+        \visible<3>{No, not you...}
+        \only<4->{
+            \begin{itemize}
+                \item Faulty encoding of instructions using \lstinline{r[8-15]}
+                \item[$\Rightarrow$] Register ids are 4bit long
+                \item Example: encode \lstinline{mov r8, r9}
+                \item Register ids: $\text r8 = 0\text b1000, \text r9 = 0\text b1001$
+                \[\text{Mod R/M} = \textcolor<4>{blue}{0\text{b}1100\_0000} + \textcolor<5>{blue}{(\text{reg2\_id} \ll 3)} + \textcolor<6>{red}{\text{reg1\_id}}\]
+            \end{itemize}
+
+            \begin{center}
+                \begin{tikzpicture}
+                    \matrix (modrm) [
+                        below=20pt of rex,
+                        matrix of nodes,
+                        nodes={draw, minimum size=18pt, anchor=center},
+                        column sep=-\pgflinewidth,
+                        row sep=-\pgflinewidth,
+                        ampersand replacement=\&
+                    ] {
+                        \textcolor<4>{blue}{\textcolor<5>{red}{\alt<5->{0}{1}}} \&
+                        \textcolor<4>{blue}{\textcolor<5>{red}{\alt<5->{0}{1}}} \&
+                        \textcolor<5>{blue}{0} \&
+                        \textcolor<5>{blue}{\textcolor<6>{red}{\alt<6->{1}{0}}} \&
+                        \textcolor<5>{blue}{\textcolor<6>{red}{\alt<5>{1}{0}}} \&
+                        \textcolor<6>{blue}{0} \&
+                        \textcolor<6>{blue}{0} \&
+                        \textcolor<6>{blue}{0} \\
+                    };
+                \end{tikzpicture}
+            \end{center}
+        }
+    \end{frame}
+
+    \begin{frame}{Exploit Primitives}
+        But, what can we do with that?
+        % TODO: describe primitives further
         \begin{itemize}
-            % Don't forget to adjust the \addbibresource above.
-            \item Citation example, if you really need it\footfullcite{nielson2003marching}
+            \item Arbitrary read
+            \item Arbitrary write
+            \item Stack access
         \end{itemize}
+    \end{frame}
+
+    \begin{frame}{The Exploit}
+        Steps:
+        \begin{enumerate}
+            \item Leak activation key
+            \item Escape seccomp jail
+            \item Execute \lstinline{system("/bin/sh")}
+            \item Profit
+        \end{enumerate}
     \end{frame}
 
 \end{document}
