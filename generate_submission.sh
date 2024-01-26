@@ -20,7 +20,7 @@ cp release_docker/Dockerfile public
 echo "Pinguine toll Pinguine toll Pinguine super" >public/activation_key.txt
 
 # packing
-tar -zcvf submission_team203.tar public private
+tar -zcvf submission_team203.tar.gz public private
 
 # cleanup
 rm compile_docker/vuln
