@@ -16,12 +16,10 @@ RUN make
 WORKDIR /
 ############### END INSTALL
 
-## Add your own dummy get_flag here
-# COPY get_flag /bin/get_flag
+COPY get_flag /bin/get_flag
 
-## Uncomment to use course libc.
-# COPY libc-2.31.so /lib/x86_64-linux-gnu/libc-2.31-bx.so
-# RUN ln -sf /lib/x86_64-linux-gnu/libc-2.31-bx.so /lib/x86_64-linux-gnu/libc.so.6
+COPY libc-2.31.so /lib/x86_64-linux-gnu/libc-2.31-bx.so
+RUN ln -sf /lib/x86_64-linux-gnu/libc-2.31-bx.so /lib/x86_64-linux-gnu/libc.so.6
 
 RUN useradd -m pwn
 

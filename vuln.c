@@ -15,7 +15,7 @@
 #include <unistd.h>
 
 #define MAX_PROGRAM_LEN 0x1000
-#define ACTIVATION_KEY_LEN 0x80
+#define ACTIVATION_KEY_LEN 0x100
 
 static char activation_key[ACTIVATION_KEY_LEN] = {0};
 
