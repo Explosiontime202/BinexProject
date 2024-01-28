@@ -36,7 +36,7 @@ RUN mkdir /home/pwn/source
 RUN tar xvf /home/pwn/parent.tar.xz -C /home/pwn/source
 RUN mkdir /home/pwn/build
 WORKDIR /home/pwn/build
-RUN cmake /home/pwn/source -G "Unix Makefiles"
+RUN cmake /home/pwn/source -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
 RUN make
 WORKDIR /
 
