@@ -189,66 +189,97 @@
         \begin{itemize}
             \item Arbitrary write: \lstinline{mov [reg1], reg2}
             \only<1-2> {
-            \begin{itemize}
-                \item Use \lstinline{COPY} to generate \lstinline{mov}, overflow into modifier bits
-                \item Register id constraints: $\text{reg1\_id} = 0\text{b}0\text{xxx}, \text{reg2\_id}=0\text{b}1\text{xxx}$
-\item[$\Rightarrow$] But can rename registers freely
-\item Example: \texttt{mov [\textcolor{ForestGreen}{rax}], \textcolor{blue}{r8}}
-\end{itemize}
+                \begin{itemize}
+                    \item Use \lstinline{COPY} to generate \lstinline{mov}, overflow into modifier bits
+                    \item Register id constraints: $\text{reg1\_id} = 0\text{b}0\text{xxx}, \text{reg2\_id}=0\text{b}1\text{xxx}$
+                    \item[$\Rightarrow$] But can rename registers freely
+                    \item Example: \texttt{mov [\textcolor{ForestGreen}{rax}], \textcolor{blue}{r8}}
+                \end{itemize}
 
-\begin{center}
-\begin{tikzpicture}
-\matrix (modrm) [
-below=20pt of rex,
-matrix of nodes,
-nodes={draw, minimum size=18pt, anchor=center},
-column sep=-\pgflinewidth,
-row sep=-\pgflinewidth,
-ampersand replacement=\&
-] {
-\textcolor<1>{black}{\textcolor<2>{red}{\alt<2>{0}{1}}} \&
-\textcolor<1>{black}{\textcolor<2>{red}{\alt<2>{0}{1}}} \&
-\textcolor<2>{blue}{0} \&
-\textcolor<2>{blue}{0} \&
-\textcolor<2>{blue}{0} \&
-\textcolor<2>{ForestGreen}{0} \&
-\textcolor<2>{ForestGreen}{0} \&
-\textcolor<2>{ForestGreen}{0} \\
-};
-\end{tikzpicture}
-\end{center}
-}
-\item Arbitrary read: \lstinline{mov reg1, [reg2]}
-\only<3>{
-\begin{itemize}
-\item Actually: \lstinline{mov reg1, 0; add reg1, [reg2]}
-\item Use same trick as for write
-\item There exists multiple opcodes for add\footnote{Also for most other standard x86 operations.}, for example:
-\item Opcode $= 0x1$: \lstinline{mov [reg1], reg2}
-\item Opcode $= 0x3$: \lstinline{mov reg1, [reg2]}
-\end{itemize}
-}
-\item Stack access
-\only<4> {
-\begin{itemize}
-\item Another overflow, but this time into \lstinline{reg2_id}
-\item Can create \lstinline{reg2_id + 1}, using reg1\_id = $0\text{b}1$xxx
-\item Id of \lstinline{rsp} is $0\text{b}0100$
-\item[$\Rightarrow$] For \lstinline{COPY G, B} is actually \lstinline{mov r8, rsp} generated
-\item Combined allow those primitives unlimited access to the stack
-\end{itemize}
-}
-\end{itemize}
-\end{frame}
+                \begin{center}
+                    \begin{tikzpicture}
+                        \matrix (modrm) [
+                            below=20pt of rex,
+                            matrix of nodes,
+                            nodes={draw, minimum size=18pt, anchor=center},
+                            column sep=-\pgflinewidth,
+                            row sep=-\pgflinewidth,
+                            ampersand replacement=\&
+                            ] {
+                            \textcolor<1>{black}{\textcolor<2>{red}{\alt<2>{0}{1}}} \&
+                            \textcolor<1>{black}{\textcolor<2>{red}{\alt<2>{0}{1}}} \&
+                            \textcolor<2>{blue}{0} \&
+                            \textcolor<2>{blue}{0} \&
+                            \textcolor<2>{blue}{0} \&
+                            \textcolor<2>{ForestGreen}{0} \&
+                            \textcolor<2>{ForestGreen}{0} \&
+                            \textcolor<2>{ForestGreen}{0} \\
+                            };
+                    \end{tikzpicture}
+                \end{center}
+            }
 
-\begin{frame}{The Exploit}
-Steps:
-\begin{enumerate}
-\item Leak activation key
-\item Escape seccomp jail
-\item Execute \lstinline{system("/bin/sh")}
-\item Profit
-\end{enumerate}
-\end{frame}
+            \item Arbitrary read: \lstinline{mov reg1, [reg2]}
+            \only<3>{
+                \begin{itemize}
+                \item Actually: \lstinline{mov reg1, 0; add reg1, [reg2]}
+                \item Use same trick as for write
+                \item There exists multiple opcodes for add\footnote{Also for most other standard x86 operations.}, for example:
+                \item Opcode $= 0x1$: \lstinline{mov [reg1], reg2}
+                \item Opcode $= 0x3$: \lstinline{mov reg1, [reg2]}
+                \end{itemize}
+            }
+
+            \item Stack access
+            \only<4> {
+                \begin{itemize}
+                \item Another overflow, but this time into \lstinline{reg2_id}
+                \item Can create \lstinline{reg2_id + 1}, using reg1\_id = $0\text{b}1$xxx
+                \item Id of \lstinline{rsp} is $0\text{b}0100$
+                \item[$\Rightarrow$] For \lstinline{COPY G, B} is actually \lstinline{mov r8, rsp} generated
+                \item Combined allow those primitives unlimited access to the stack
+                \end{itemize}
+            }
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{The Exploit}
+        \only<1-4>{
+        Steps:
+        \begin{itemize}
+            \item Leak activation key
+            \only<2>{
+                \begin{itemize}
+                    \item Activation key is stored in a variable in the binary
+                    \item The provided program returns into the binary after execution
+                    \item Use stack access primitive to leak the return address
+                    \item Use arbitrary read primitive to leak the key byte by byte
+                \end{itemize}
+            }
+            \item Escape seccomp jail
+            \only<3>{
+                \begin{itemize}
+                    \item Activate premium mode with the leaked key 
+                    \item \it{much wow great hacking}
+                \end{itemize}
+            }
+            \item Execute \lstinline{system("/bin/sh")}
+            \only<4>{
+                \begin{itemize}
+                    \item Use stack access primitive to leak a libc address
+                    \item Calculate \lstinline{system} and \lstinline{/bin/sh} addresses
+                    \item Load \lstinline{/bin/sh} address into \lstinline{rdi}
+                    \item Use arbitrary write primitive to overwrite saved rip
+                \end{itemize}
+            }
+        \end{itemize}
+        }
+        \only<5>{
+            \begin{figure}
+                \centering
+                \includegraphics[scale=0.22]{profit_penguin}
+            \end{figure}
+        }
+    \end{frame}
 
 \end{document}
