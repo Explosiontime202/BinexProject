@@ -1,0 +1,285 @@
+\documentclass[usenames,dvipsnames]{beamer}
+
+\usepackage{xcolor}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage[style=alphabetic,giveninits=true,terseinits=true]{biblatex}
+\usepackage{graphicx}
+
+\usetikzlibrary{matrix, positioning, decorations.pathreplacing, overlay-beamer-styles}
+
+\definecolor{tumblue}{RGB}{0,101,189}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\lstset{
+    basicstyle=\footnotesize\ttfamily,%
+    columns=fullflexible,%
+    keywordstyle=\bfseries\color{blue},%
+    commentstyle=\color{dkgreen},%
+    stringstyle=\color{mauve},%
+}
+
+\DeclareFieldFormat{url}{\href{#1}{\resizebox{!}{2ex}{\lower3pt\hbox{\pgfuseimage{beamericononline}}}}}
+\addbibresource{slides.bib}
+
+\setbeamerfont{footnote}{size=\tiny}
+\renewcommand\footnoterule{}
+\usecolortheme{orchid}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{sidebar right}{% also implies no navbar
+    \llap{\tikz\fill[tumblue,scale=.1] (0,0) ++(-5cm,-5cm) ++(-10cm,0)
+        +(0cm,0cm) -- +(4cm,0cm) -- +(4cm,-4cm) -- +(5cm,-4cm) -- +(5cm,0cm) --
+        +(10cm,0cm) -- +(10cm,-5cm) -- +(9cm,-5cm) -- +(9cm,-1cm) --
+        +(8cm,-1cm) -- +(8cm,-5cm) -- +(7cm,-5cm) -- +(7cm,-1cm) --
+        +(6cm,-1cm) -- +(6cm,-5cm) -- +(3cm,-5cm) -- +(3cm,-1cm) --
+        +(2cm,-1cm) -- +(2cm,-5cm) -- +(1cm,-5cm) -- +(1cm,-1cm) --
+        +(0cm,-1cm) -- cycle;}
+    % Slide number in triangle.
+    \vfill\llap{\tikz\path[fill=tumblue,inner sep=3pt] (0,0) -- ++(-1cm,0) -- +(1cm,1cm) -- cycle node[anchor=south east] {\usebeamerfont{footline}\color{white}\bfseries\insertframenumber};}%
+% Variant without triangle
+%\vfill\llap{\usebeamerfont{footline}\usebeamercolor[fg]{footline}\insertframenumber\hskip3pt}\vskip3pt%
+}
+
+\graphicspath{ {./images/} }
+
+\title{CoPaaS - Compiler-oriented Programming as a Service}
+\author{Simon Bußmann \and Johannes Maier}
+\institute{School of Computation, Information, and Technology\\Technical University of Munich}
+\date{Future}
+
+\begin{document}
+
+    \begin{frame}
+        \titlepage
+    \end{frame}
+
+    \begin{frame}{The program}
+        \begin{itemize}
+            \item JIT-Compiler for toy ISA
+            \item Instructions: \lstinline{ADD, ADDI, SUB, COPY, LOADI}
+            \item Important: No jumps, branches, function calls, etc. for simplicity
+            \item Registers:
+            \only<1> {
+                \begin{tabular}{|l|l|l|}
+                    \hline
+                    \textbf Adelheid  & \textbf Friedrich & \textbf Klaus    \\
+                    \hline
+                    \textbf Berthold  & \textbf Giesela   & \textbf Liesbeth \\
+                    \hline
+                    \textbf Cornelia  & \textbf Heinrich  & \textbf Manfred  \\
+                    \hline
+                    \textbf Dora      & \textbf Irmgard   & \textbf Norbert  \\
+                    \hline
+                    \textbf Engelbert & \textbf Joachim   &                  \\
+                    \hline
+                \end{tabular}
+            }
+            \only<2-> {
+                \texttt A, \texttt B\dots \texttt N
+            }
+            \visible<3-> {
+                \item Seccomp jail for generated code
+                \item Except: \visible<4->{In premium mode activated by key}
+            }
+            \visible<5->{
+                \item NX, PIE, Full RERLO, Stack Canary
+            }
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{x86-64 Instruction Encoding Basics}
+        \begin{columns}
+            \begin{column}{0.35\textwidth}
+
+                Parts of an instruction:
+                \begin{itemize}
+                    \item \textcolor<2>{blue}{Prefixes}
+                    \item Opcode
+                    \item \textcolor<3-5>{blue}{ModR/M}
+                    \item SIB
+                    \item Displacement
+                    \item Immediate
+                \end{itemize}
+            \end{column}
+            \begin{column}{0.65\textwidth}
+                \begin{tikzpicture}[scale=0.75]
+
+                    % REX.W prefix
+                    \matrix (rex) at (0,0) [
+                    matrix of nodes,
+                    nodes={draw, minimum size=18pt, anchor=center},
+                    column sep=-\pgflinewidth,
+                    row sep=-\pgflinewidth,
+                    ampersand replacement=\&
+                    ] {
+                        0 \& 1\& 0 \& 0 \& \textcolor<2>{blue}{W} \& \textcolor<2>{blue}{R} \& X \& \textcolor<2>{blue}{B} \\
+                    };
+
+                    % ModR/M byte
+                    \matrix (modrm) [
+                        below=20pt of rex,
+                        matrix of nodes,
+                        nodes={draw, minimum size=18pt, anchor=center},
+                        column sep=-\pgflinewidth,
+                        row sep=-\pgflinewidth,
+                        ampersand replacement=\&
+                    ] {
+                        \textcolor<3>{blue}{1} \& \textcolor<3>{blue}{1} \& \textcolor<4>{blue}{0} \& \textcolor<4>{blue}{1} \& \textcolor<4>{blue}{0} \& \textcolor<5>{blue}{0} \& \textcolor<5>{blue}{0} \& \textcolor<5>{blue}{0} \\
+                    };
+
+                    % Labels
+                    \node[anchor=east] at (rex.west) {REX.W};
+                    \node[anchor=east] at (modrm.west) {ModR/M};
+
+                    % Brackets for ModR/M parts
+                    \draw[semithick, decorate, decoration={brace, amplitude=10pt, mirror, raise=4pt}, alt=<3>{blue}{black}] (modrm-1-1.south west) -- (modrm-1-2.south east) node[midway, below=14pt] {\textcolor<3>{blue}{Modifier}};
+                    \draw[semithick, decorate, decoration={brace, amplitude=10pt, mirror, raise=4pt}, alt=<4>{blue}{black}] (modrm-1-3.south west) -- (modrm-1-5.south east) node[midway, below=14pt, xshift=-4pt] {\textcolor<4>{blue}{Reg}};
+                    \draw[semithick, decorate, decoration={brace, amplitude=10pt, mirror, raise=4pt}, alt=<5>{blue}{black}] (modrm-1-6.south west) -- (modrm-1-8.south east) node[midway, below=14pt] {\textcolor<5>{blue}{RM}};
+
+                \end{tikzpicture}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+    \begin{frame}{The Bug}
+        \only<2-3> {
+            \begin{figure}
+                \centering
+                \includegraphics[scale=0.65]{bug}
+            \end{figure}
+        }
+        \visible<3>{No, not you...}
+        \only<4->{
+            \begin{itemize}
+                \item Faulty encoding of instructions using \lstinline{r[8-15]}
+                \item[$\Rightarrow$] Register ids are 4bit long
+                \item Example: encode ModR/M for \lstinline{mov r8, r9}
+                \item Register ids: $\text r8 = 0\text b1000, \text r9 = 0\text b1001$
+                \[\text{Mod R/M} = \textcolor<4>{blue}{0\text{b}1100\_0000} + \textcolor<5>{blue}{(\text{reg2\_id} \ll 3)} + \textcolor<6>{blue}{\text{reg1\_id}}\]
+            \end{itemize}
+
+            \begin{center}
+                \begin{tikzpicture}
+                    \matrix (modrm) [
+                        below=20pt of rex,
+                        matrix of nodes,
+                        nodes={draw, minimum size=18pt, anchor=center},
+                        column sep=-\pgflinewidth,
+                        row sep=-\pgflinewidth,
+                        ampersand replacement=\&
+                    ] {
+                        \textcolor<4>{blue}{\textcolor<5>{red}{\alt<5->{0}{1}}} \&
+                        \textcolor<4>{blue}{\textcolor<5>{red}{\alt<5->{0}{1}}} \&
+                        \textcolor<5>{blue}{0} \&
+                        \textcolor<5>{blue}{\textcolor<6>{red}{\alt<6->{1}{0}}} \&
+                        \textcolor<5>{blue}{\textcolor<6>{red}{\alt<5>{1}{0}}} \&
+                        \textcolor<6>{blue}{0} \&
+                        \textcolor<6>{blue}{0} \&
+                        \textcolor<6>{blue}{0} \\
+                    };
+                \end{tikzpicture}
+            \end{center}
+        }
+    \end{frame}
+
+    \begin{frame}{Exploit Primitives}
+        But, what can we do with that?
+        % TODO: describe primitives further
+        \begin{itemize}
+            \item Arbitrary write: \lstinline{mov [reg1], reg2}
+            \only<1-2> {
+                \begin{itemize}
+                    \item Use \lstinline{COPY} to generate \lstinline{mov}, overflow into modifier bits
+                    \item Register id constraints: $\text{reg1\_id} = 0\text{b}0\text{xxx}, \text{reg2\_id}=0\text{b}1\text{xxx}$
+                    \item[$\Rightarrow$] But can rename registers freely
+                    \item Example: \texttt{mov [\textcolor{ForestGreen}{rax}], \textcolor{blue}{r8}}
+                \end{itemize}
+
+                \begin{center}
+                    \begin{tikzpicture}
+                        \matrix (modrm) [
+                            below=20pt of rex,
+                            matrix of nodes,
+                            nodes={draw, minimum size=18pt, anchor=center},
+                            column sep=-\pgflinewidth,
+                            row sep=-\pgflinewidth,
+                            ampersand replacement=\&
+                            ] {
+                            \textcolor<1>{black}{\textcolor<2>{red}{\alt<2>{0}{1}}} \&
+                            \textcolor<1>{black}{\textcolor<2>{red}{\alt<2>{0}{1}}} \&
+                            \textcolor<2>{blue}{0} \&
+                            \textcolor<2>{blue}{0} \&
+                            \textcolor<2>{blue}{0} \&
+                            \textcolor<2>{ForestGreen}{0} \&
+                            \textcolor<2>{ForestGreen}{0} \&
+                            \textcolor<2>{ForestGreen}{0} \\
+                            };
+                    \end{tikzpicture}
+                \end{center}
+            }
+
+            \item Arbitrary read: \lstinline{mov reg1, [reg2]}
+            \only<3>{
+                \begin{itemize}
+                \item Actually: \lstinline{mov reg1, 0; add reg1, [reg2]}
+                \item Use same trick as for write
+                \item There exists multiple opcodes for add\footnote{Also for most other standard x86 operations.}, for example:
+                \item Opcode $= 0x1$: \lstinline{mov [reg1], reg2}
+                \item Opcode $= 0x3$: \lstinline{mov reg1, [reg2]}
+                \end{itemize}
+            }
+
+            \item Stack access
+            \only<4> {
+                \begin{itemize}
+                \item Another overflow, but this time into \lstinline{reg2_id}
+                \item Can create \lstinline{reg2_id + 1}, using reg1\_id = $0\text{b}1$xxx
+                \item Id of \lstinline{rsp} is $0\text{b}0100$
+                \item[$\Rightarrow$] For \lstinline{COPY G, B} is actually \lstinline{mov r8, rsp} generated
+                \item Combined allow those primitives unlimited access to the stack
+                \end{itemize}
+            }
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{The Exploit}
+        \only<1-4>{
+        Steps:
+        \begin{itemize}
+            \item Leak activation key
+            \only<2>{
+                \begin{itemize}
+                    \item Activation key is stored in a variable in the binary
+                    \item The provided program returns into the binary after execution
+                    \item Use stack access primitive to leak the return address
+                    \item Use arbitrary read primitive to leak the key byte by byte
+                \end{itemize}
+            }
+            \item Escape seccomp jail
+            \only<3>{
+                \begin{itemize}
+                    \item Activate premium mode with the leaked key 
+                    \item \it{much wow great hacking}
+                \end{itemize}
+            }
+            \item Execute \lstinline{system("/bin/sh")}
+            \only<4>{
+                \begin{itemize}
+                    \item Use stack access primitive to leak a libc address
+                    \item Calculate \lstinline{system} and \lstinline{/bin/sh} addresses
+                    \item Load \lstinline{/bin/sh} address into \lstinline{rdi}
+                    \item Use arbitrary write primitive to overwrite saved rip
+                \end{itemize}
+            }
+        \end{itemize}
+        }
+        \only<5>{
+            \begin{figure}
+                \centering
+                \includegraphics[scale=0.22]{profit_penguin}
+            \end{figure}
+        }
+    \end{frame}
+
+\end{document}

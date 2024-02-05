@@ -60,6 +60,8 @@ build
 /.vscode
 /.cache
 
+presentation/build
+
 debug_docker/**/*
 !/debug_docker/Dockerfile
 !/debug_docker/launch.sh
