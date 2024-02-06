@@ -196,9 +196,8 @@
             \only<1-2> {
                 \begin{itemize}
                     \item Use \lstinline{COPY} to generate \lstinline{mov}, overflow into modifier bits
-                    \item Register id constraints: $\text{reg1\_id} = 0\text{b}0\text{xxx}, \text{reg2\_id}=0\text{b}1\text{xxx}$
-                    \item[$\Rightarrow$] But can rename registers freely
-                    \item Example: \texttt{mov [\textcolor{ForestGreen}{rax}], \textcolor{blue}{r8}}
+                    \item Register id constraints: $\text{\textcolor{ForestGreen}{reg1\_id}} = 0\text{b}0\text{xxx}, \text{\textcolor{blue}{reg2\_id}}=0\text{b}1\text{xxx}$
+                    \item Example: \texttt{mov \textcolor{ForestGreen}{rax}, \textcolor{blue}{r8}} $\Rightarrow$ \texttt{mov [\textcolor{ForestGreen}{rax}], \textcolor{blue}{r8}}
                 \end{itemize}
 
                 \begin{center}
@@ -220,6 +219,8 @@
                             \textcolor<2>{ForestGreen}{0} \&
                             \textcolor<2>{ForestGreen}{0} \\
                             };
+
+                            \draw[semithick, decorate, decoration={brace, amplitude=10pt, mirror, raise=4pt}] (modrm-1-1.south west) -- (modrm-1-8.south east) node[midway, below=14pt] {ModR/M Byte};
                     \end{tikzpicture}
                 \end{center}
             }
@@ -230,20 +231,41 @@
                 \item Actually: \lstinline{mov reg1, 0; add reg1, [reg2]}
                 \item Use same trick as for write
                 \item There exists multiple opcodes for add\footnote{Also for most other standard x86 operations.}, for example:
-                \item Opcode $= 0x1$: \lstinline{mov [reg1], reg2}
-                \item Opcode $= 0x3$: \lstinline{mov reg1, [reg2]}
+                \item Opcode $= 0x1$: \lstinline{add [reg2], reg1}
+                \item Opcode $= 0x3$: \lstinline{add reg1, [reg2]}
                 \end{itemize}
             }
 
             \item Stack access
-            \only<4> {
+            \only<4-5> {
                 \begin{itemize}
-                \item Another overflow, but this time into \lstinline{reg2_id}
-                \item Can create \lstinline{reg2_id + 1}, using reg1\_id = $0\text{b}1$xxx
-                \item Id of \lstinline{rsp} is $0\text{b}0100$
-                \item[$\Rightarrow$] For \lstinline{COPY G, B} is actually \lstinline{mov r8, rsp} generated
-                \item Combined allow those primitives unlimited access to the stack
-                \end{itemize}
+                \item Achieved by overflow into \lstinline{reg2_id}
+                \item \lstinline{COPY G, B} should be compiled to: \lstinline{mov r8, rbx}
+                \item<5> Actually compiled: \lstinline{mov r8, rsp}
+            \end{itemize}
+                \begin{center}
+                    \begin{tikzpicture}
+                        \matrix (modrm) [
+                            below=20pt of rex,
+                            matrix of nodes,
+                            nodes={draw, minimum size=18pt, anchor=center},
+                            column sep=-\pgflinewidth,
+                            row sep=-\pgflinewidth,
+                            ampersand replacement=\&
+                            ] {
+                            1 \&
+                            1 \&
+                            \textcolor<5>{red}{\alt<5>{1}{0}} \&
+                            \textcolor<5>{red}{\alt<5>{0}{1}} \&
+                            \textcolor<5>{red}{\alt<5>{0}{1}} \&     
+                            \textcolor<5>{blue}{0} \&
+                            \textcolor<5>{blue}{0} \&
+                            \textcolor<5>{blue}{0} \\
+                            };
+
+                            \draw[semithick, decorate, decoration={brace, amplitude=10pt, mirror, raise=4pt}] (modrm-1-1.south west) -- (modrm-1-8.south east) node[midway, below=14pt] {ModR/M Byte};
+                    \end{tikzpicture}
+                \end{center}
             }
         \end{itemize}
     \end{frame}
@@ -255,9 +277,8 @@
             \item Leak activation key
             \only<2>{
                 \begin{itemize}
-                    \item Activation key is stored in a variable in the binary
-                    \item The provided program returns into the binary after execution
-                    \item Use stack access primitive to leak the return address
+                    \item Activation key is located in the binary
+                    \item Use stack access primitive to leak return address
                     \item Use arbitrary read primitive to leak the key byte by byte
                 \end{itemize}
             }
