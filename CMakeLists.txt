@@ -7,4 +7,7 @@ set(CMAKE_C_FLAGS "-Wall -Werror -g -fstack-protector -fshort-enums -z noexecsta
 
 add_executable(vuln vuln.c)
 
-add_subdirectory(presentation)
+if(NOT DEFINED ENV{DISABLE_PRESENTATION_BUILD})
+	add_subdirectory(presentation)
+endif()
+
