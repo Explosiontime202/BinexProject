@@ -20,12 +20,12 @@ COPY . /home/pwn/source
 # compile vuln in debug mode
 RUN mkdir /home/pwn/debug
 WORKDIR /home/pwn/debug
-RUN cmake /home/pwn/source -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug
+RUN DISABLE_PRESENTATION_BUILD=true cmake /home/pwn/source -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug
 RUN make
 
 RUN mkdir /home/pwn/release
 WORKDIR /home/pwn/release
-RUN cmake /home/pwn/source -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+RUN DISABLE_PRESENTATION_BUILD=true cmake /home/pwn/source -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
 RUN make
 
 RUN chown -R pwn:pwn /home/pwn
