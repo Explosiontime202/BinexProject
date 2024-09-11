@@ -8,18 +8,7 @@ FROM debian:bullseye
 
 RUN apt update -y && apt upgrade -y && apt install -y build-essential wget cmake tar gdb libc6-dbg python3 file strace
 
-
-############### INSTALL FNETD
-RUN wget https://cloud.sec.in.tum.de/index.php/s/n5cJnDqnnpSeEpd/download/fnetd.tar.xz -O /fnetd.tar.xz
-RUN tar -xf fnetd.tar.xz
-RUN mkdir /fnetd/build
-
-WORKDIR /fnetd/build
-RUN cmake .. -G "Unix Makefiles"
-RUN make
-
-WORKDIR /
-############### END INSTALL
+COPY fnetd /bin/
 
 ## Add your own dummy get_flag here
 COPY get_flag /bin/get_flag
@@ -53,4 +42,4 @@ EXPOSE 1337
 
 # Feel free to replace password with the actual chall pw
 ENV FNETD_PASSWORD=1234
-CMD ["/fnetd/build/fnetd", "-p", "1337", "-u", "pwn", "-lt", "2", "-lm", "536870912", "./vuln"]
+CMD ["fnetd", "-p", "1337", "-u", "pwn", "-lt", "2", "-lm", "536870912", "./vuln"]
