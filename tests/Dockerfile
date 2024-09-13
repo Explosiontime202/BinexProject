@@ -46,4 +46,4 @@ WORKDIR /home/pwn
 RUN cp /home/pwn/source/activation_key.txt activation_key.txt
 
 
-ENTRYPOINT ["sh", "-c", "fnetd -p $PORT_DEBUG -u pwn -lt 2 -lm 536870912 /home/pwn/debug/vuln & /fnetd/build/fnetd -p $PORT_RELEASE -u pwn -lt 2 -lm 536870912 /home/pwn/release/vuln"]
+ENTRYPOINT ["sh", "-c", "fnetd -p $PORT_DEBUG -u pwn -lt 2 -lm 536870912 /home/pwn/debug/vuln & fnetd -p $PORT_RELEASE -u pwn -lt 2 -lm 536870912 /home/pwn/release/vuln"]
