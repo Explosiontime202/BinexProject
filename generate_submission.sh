@@ -8,6 +8,7 @@ cp exploit/exploit.py private
 cp activation_key.txt private
 cp release_docker/README.md private
 cp release_docker/Dockerfile private
+cp fnetd private
 
 # compile vuln
 cd compile_docker
@@ -18,6 +19,7 @@ cd ..
 cp compile_docker/vuln public
 cp vuln.c public
 cp release_docker/Dockerfile public
+cp fnetd public
 
 echo "Pinguine toll Pinguine toll Pinguine super" >public/activation_key.txt
 

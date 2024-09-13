@@ -2,17 +2,7 @@ FROM debian:bullseye
 
 RUN apt update -y && apt upgrade -y && apt install -y build-essential wget cmake
 
-############### INSTALL FNETD
-RUN wget https://cloud.sec.in.tum.de/index.php/s/n5cJnDqnnpSeEpd/download/fnetd.tar.xz -O /fnetd.tar.xz
-RUN tar -xf fnetd.tar.xz
-RUN mkdir /fnetd/build
-
-WORKDIR /fnetd/build
-RUN cmake .. -G "Unix Makefiles"
-RUN make
-
-WORKDIR /
-############### END INSTALL
+COPY fnetd /bin/fnetd
 
 ## Add dummy get_flag
 COPY tests/get_flag.c /bin/get_flag.c
@@ -30,12 +20,12 @@ COPY . /home/pwn/source
 # compile vuln in debug mode
 RUN mkdir /home/pwn/debug
 WORKDIR /home/pwn/debug
-RUN cmake /home/pwn/source -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug
+RUN DISABLE_PRESENTATION_BUILD=true cmake /home/pwn/source -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug
 RUN make
 
 RUN mkdir /home/pwn/release
 WORKDIR /home/pwn/release
-RUN cmake /home/pwn/source -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+RUN DISABLE_PRESENTATION_BUILD=true cmake /home/pwn/source -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
 RUN make
 
 RUN chown -R pwn:pwn /home/pwn
@@ -56,4 +46,4 @@ WORKDIR /home/pwn
 RUN cp /home/pwn/source/activation_key.txt activation_key.txt
 
 
-ENTRYPOINT ["sh", "-c", "/fnetd/build/fnetd -p $PORT_DEBUG -u pwn -lt 2 -lm 536870912 /home/pwn/debug/vuln & /fnetd/build/fnetd -p $PORT_RELEASE -u pwn -lt 2 -lm 536870912 /home/pwn/release/vuln"]
+ENTRYPOINT ["sh", "-c", "fnetd -p $PORT_DEBUG -u pwn -lt 2 -lm 536870912 /home/pwn/debug/vuln & fnetd -p $PORT_RELEASE -u pwn -lt 2 -lm 536870912 /home/pwn/release/vuln"]
